@@ -1,0 +1,292 @@
+% \iffalse meta-comment
+%
+%% Copyright (C) 2020 by Marcel Krueger
+%%
+%% This file may be distributed and/or modified under the
+%% conditions of the LaTeX Project Public License, either
+%% version 1.3c of this license or (at your option) any later
+%% version. The latest version of this license is in:
+%%
+%% http://www.latex-project.org/lppl.txt
+%%
+%% and version 1.3 or later is part of all distributions of
+%% LaTeX version 2005/12/01 or later.
+%
+%<*batch>
+%<*gobble>
+\ifx\jobname\relax\let\documentclass\undefined\fi
+\ifx\documentclass\undefined
+\csname fi\endcsname
+%</gobble>
+\input docstrip.tex
+\keepsilent
+\let\MetaPrefix\relax
+\preamble
+\endpreamble
+\postamble
+\endpostamble
+\def\MetaPrefix{--}
+\generate{%
+  \file{luaul.lua}{\from{luaul.dtx}{luacode}}%
+  \file{pre_append_to_vlist_filter.lua}{\from{luaul.dtx}{callback}}%
+}
+\let\MetaPrefix\DoubleperCent
+\generate{\file{luaul.sty}{\from{luaul.dtx}{package}}}
+\endbatchfile
+%</batch>
+%<*gobble>
+\fi
+\expandafter\ifx\csname @currname\endcsname\empty
+\csname fi\endcsname
+%</gobble>
+%<*driver>
+\documentclass{article}
+% \usepackage{luaul}
+\usepackage{metalogo,hyperref}
+\begin{document}
+\DocInput{luaul.dtx}
+\PrintIndex
+\PrintChanges
+\end{document}
+%</driver>
+%<*gobble>
+\fi
+%</gobble>
+% \fi
+%
+% \newcommand\luaul{LuauL}
+% \GetFileInfo{luaul.dtx}
+% \title{The \luaul\ package\thanks{This document
+%        corresponds to \luaul\~\fileversion, dated~\filedate.}}
+% \author{Marcel Kr\"uger \\ \href{mailto:tex@2krueger.de}{tex@2krueger.de}}
+%
+% \begin{document}
+% \maketitle
+%
+% \StopEventually{}
+% \section{The implementation}
+% \subsection{Helper modules}
+% First we need a separate Lua module \verb+pre_append_to_vlist_filter+ which
+% provides a variant of the \verb+append_to_vlist_filter+ callback which can be
+% used by multiple packages. This ensures that we are compatible with other packages
+% implementing \verb+append_to_vlist_filter+.
+% \iffalse
+%<*gobble>
+\RequirePackage{docstrip-luacode}
+\begin{docstrip-luacode}{pre_append_to_vlist_filter}
+%</gobble>
+%<*callback>
+% \fi
+%    \begin{macrocode}
+-- First check if an equivalent to pre_append_to_vlist_filter already exists
+-- The idea is that this might eventually get added to the kernel directly
+if luatexbase.callbacktypes.pre_append_to_vlist_filter then
+  return
+end
+
+local call_callback = luatexbase.call_callback
+local flush_node = node.flush_node
+local prepend_prevdepth = node.prepend_prevdepth
+local callback_define
+
+-- HACK: Do not do this at home!
+for i=1,5 do
+  local name, func = debug.getupvalue(luatexbase.disable_callback, i)
+  if name == 'callback_register' then
+    callback_define = func
+    break
+  end
+end
+if not callback_define then
+  error[[Unable to find callback.define]]
+end
+
+local function filtered_append_to_vlist_filter(box, locationcode, prevdepth, mirrored)
+  local current = call_callback("pre_append_to_vlist_filter", box, locationcode, prevdepth, mirrored)
+  if not current then
+    flush_node(box)
+    return
+  elseif current == true then
+    current = box
+  end
+  return call_callback("append_to_vlist_filter", box, locationcode, prevdepth, mirrored)
+end
+
+callback_define('append_to_vlist_filter', filtered_append_to_vlist_filter)
+luatexbase.callbacktypes.append_to_vlist_filter = nil
+luatexbase.create_callback('append_to_vlist_filter', 'exclusive', function(n, _, prevdepth) return prepend_prevdepth(n, prevdepth) end)
+luatexbase.create_callback('pre_append_to_vlist_filter', 'list', false)
+%    \end{macrocode}
+% \iffalse
+%</callback>
+%<*gobble>
+\end{docstrip-luacode}
+%</gobble>
+% \fi
+% \subsection{Lua module}
+% Now we can define our main Lua module:
+% \iffalse
+%<*gobble>
+\begin{docstrip-luacode}{luaul}
+%</gobble>
+%<*luacode>
+% \fi
+%    \begin{macrocode}
+local hlist_t = node.id'hlist'
+local vlist_t = node.id'vlist'
+local kern_t = node.id'kern'
+local glue_t = node.id'glue'
+
+local underlineattrs = {}
+local underline_types = {}
+local function new_underline_type()
+  local b = token.scan_list()
+  table.insert(underline_types, b.head)
+  b.head = nil
+  node.flush_node(b)
+  token.put_next(token.new(#underline_types, token.command_id'char_given'))
+end
+local function set_underline()
+  local j
+  for i=1,#underlineattrs do
+    local attr = underlineattrs[i]
+    if tex.attribute[attr] == -0x7FFFFFFF then
+      j = attr
+      break
+    end
+  end
+  if not j then
+    j = luatexbase.new_attribute("luaul" .. tostring(#underlineattrs+1))
+    underlineattrs[#underlineattrs+1] = j
+  end
+  tex.attribute[j] = token.scan_int()
+end
+local functions = lua.get_functions_table()
+local new_underline_type_func = luatexbase.new_luafunction"luaul.new_underline_type"
+local set_underline_func = luatexbase.new_luafunction"luaul.set_underline_func"
+token.set_lua("LuaULNewUnderlineType", new_underline_type_func)
+token.set_lua("LuaULSetUnderline", set_underline_func, "protected")
+functions[new_underline_type_func] = new_underline_type
+functions[set_underline_func] = set_underline
+
+local add_underline_h
+local function add_underline_v(head, attr)
+  for n in node.traverse(head) do
+    if head.id == hlist_t then
+      add_underline_h(n, attr)
+    elseif head.id == vlist_t then
+      add_underline_v(n.head, attr)
+    end
+  end
+end
+function add_underline_h(head, attr)
+  local used = false
+  node.slide(head.head)
+  local last_value
+  local first
+  for n in node.traverse(head.head) do
+    local new_value = node.has_attribute(n, attr)
+    if n.id == hlist_t then
+      new_value = nil
+      add_underline_h(n, attr)
+    elseif n.id == vlist_t then
+      new_value = nil
+      add_underline_v(n.head, attr)
+    elseif n.id == kern_t and n.subtype == 0 then
+      if n.next and not node.has_attribute(n.next, attr) then
+        new_value = nil
+      else
+        new_value = last_value
+      end
+    elseif n.id == glue_t and (
+        n.subtype == 8 or
+        n.subtype == 9 or
+        n.subtype == 15 or
+    false) then
+      new_value = nil
+    end
+    if last_value ~= new_value then
+      if last_value then
+        local width = node.rangedimensions(head, first, n)
+        local kern = node.new(kern_t)
+        kern.kern = -width
+        kern.next = node.copy(underline_types[last_value])
+        kern.next.width = width
+        kern.next.next = n
+        n.prev.next = kern
+      end
+      if new_value then
+        first = n
+      end
+      last_value = new_value
+    end
+  end
+  if last_value then
+    local width = node.rangedimensions(head, first)
+    local kern = node.new(kern_t)
+    kern.kern = -width
+    kern.next = node.copy(underline_types[last_value])
+    kern.next.width = width
+    node.tail(head.head).next = kern
+  end
+end
+local function filter(b, loc, prev, mirror)
+  for i = 1,#underlineattrs do
+    add_underline_v(b, underlineattrs[i])
+  end
+  return true
+end
+require'pre_append_to_vlist_filter'
+luatexbase.add_to_callback('pre_append_to_vlist_filter', filter, 'add underlines to list')
+%    \end{macrocode}
+% \iffalse
+%</luacode>
+%<*gobble>
+\end{docstrip-luacode}
+%</gobble>
+% \fi
+% \subsection{\TeX\ support package}
+% Now only some \LaTeX\ glue code is still needed
+% \iffalse
+%<*package>
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage
+  {luaul}
+  [2020/03/08 v0.0.1 Underlining and related functionality for LuaTeX]
+
+% \fi
+% Only \LuaLaTeX{} is supported.
+% For other engines we show an error.
+%    \begin{macrocode}
+\ifx\directlua\undefined
+  \PackageError{luaul}{LuaLaTeX required}{LuaUL requires LuaLaTeX. Maybe you forgot to switch the engines?}
+\fi
+\directlua{require'luaul'}
+%    \end{macrocode}
+%    \begin{macrocode}
+\newcommand\newunderlinetype[2]{%
+  \newcommand#1{}% "Reserve" the name
+  \edef#1##1{{\LuaULSetUnderline\LuaULNewUnderlineType\hbox{#2\hskip0pt}##1}}%
+}
+% \newunderlinetype\underLine{\leaders\vrule height-1ptdepth1.5pt}
+% \newunderlinetype\strikeThrough{\leaders\vrule height2.5ptdepth-2pt}
+% \newunderlinetype\underDuck{\cleaders\hbox{%
+%     \begin{tikzpicture}[baseline=3,scale=0.05]%
+%       \duck
+%     \end{tikzpicture}%
+% }}
+% \newunderlinetype\underWavy{\leaders\hbox{%
+%     \setlength\unitlength{.3mm}%
+%     \begin{picture}(4,0)(0,1)
+%       \thicklines
+%       \color{red}%
+%       \qbezier(0,0)(1,1)(2,0)
+%       \qbezier(2,0)(3,-1)(4,0)
+%     \end{picture}%
+% }}
+%    \end{macrocode}
+% \iffalse
+%</package>
+% \fi
+% \Finale
+% \end{document}
