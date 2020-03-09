@@ -41,8 +41,8 @@
 %</gobble>
 %<*driver>
 \documentclass{article}
-% \usepackage{luaul}
-\usepackage{metalogo,hyperref}
+\usepackage{luaul}
+\usepackage{doc,framed,metalogo,hyperref}
 \begin{document}
 \DocInput{luaul.dtx}
 \PrintIndex
@@ -54,14 +54,30 @@
 %</gobble>
 % \fi
 %
+% \newcommand\Luaul{LuauL}
 % \newcommand\luaul{LuauL}
-% \GetFileInfo{luaul.dtx}
+% \GetFileInfo{luaul.sty}
 % \title{The \luaul\ package\thanks{This document
-%        corresponds to \luaul\~\fileversion, dated~\filedate.}}
+%        corresponds to \luaul~\fileversion, dated~\filedate.}}
 % \author{Marcel Kr\"uger \\ \href{mailto:tex@2krueger.de}{tex@2krueger.de}}
 %
-% \begin{document}
 % \maketitle
+% \Luaul\ uses new capabilities of the LuaTeX engine to provide
+% underlining/\hspace{0pt}strikethrough/\hspace{0pt}highlighting
+% etc.\ support without breaking ligatures, kerning or restricting input.
+% The two main commands are \verb+\underLine+ and \verb+\strikeThrough+. They are used as
+%
+% \begin{verbatim}
+%   \documentclass{article}
+%   \usepackage{luaul}
+%   \begin{document}
+%   This package is \strikeThrough{useless}\underLine{awesome}!
+%   \end{document}
+% \end{verbatim}
+%
+% \begin{framed}
+%   This package is \strikeThrough{useless}\underLine{awesome}!
+% \end{framed}
 %
 % \StopEventually{}
 % \section{The implementation}
@@ -77,9 +93,9 @@
 %</gobble>
 %<*callback>
 % \fi
+% First check if an equivalent to \verb+pre_append_to_vlist_filter+ already exists.
+% The idea is that this might eventually get added to the kernel directly.
 %    \begin{macrocode}
--- First check if an equivalent to pre_append_to_vlist_filter already exists
--- The idea is that this might eventually get added to the kernel directly
 if luatexbase.callbacktypes.pre_append_to_vlist_filter then
   return
 end
@@ -89,7 +105,10 @@ local flush_node = node.flush_node
 local prepend_prevdepth = node.prepend_prevdepth
 local callback_define
 
--- HACK: Do not do this at home!
+%    \end{macrocode}
+% HACK: Do not do this at home! We need to define the engine callback diectly,
+% so we use the debug library to get the ``real'' \verb+callback.define+:
+%    \begin{macrocode}
 for i=1,5 do
   local name, func = debug.getupvalue(luatexbase.disable_callback, i)
   if name == 'callback_register' then
@@ -101,21 +120,32 @@ if not callback_define then
   error[[Unable to find callback.define]]
 end
 
-local function filtered_append_to_vlist_filter(box, locationcode, prevdepth, mirrored)
-  local current = call_callback("pre_append_to_vlist_filter", box, locationcode, prevdepth, mirrored)
+local function filtered_append_to_vlist_filter(box,
+                                               locationcode,
+                                               prevdepth,
+                                               mirrored)
+  local current = call_callback("pre_append_to_vlist_filter",
+                                box, locationcode, prevdepth,
+                                mirrored)
   if not current then
     flush_node(box)
     return
   elseif current == true then
     current = box
   end
-  return call_callback("append_to_vlist_filter", box, locationcode, prevdepth, mirrored)
+  return call_callback("append_to_vlist_filter",
+                       box, locationcode, prevdepth, mirrored)
 end
 
-callback_define('append_to_vlist_filter', filtered_append_to_vlist_filter)
+callback_define('append_to_vlist_filter',
+                filtered_append_to_vlist_filter)
 luatexbase.callbacktypes.append_to_vlist_filter = nil
-luatexbase.create_callback('append_to_vlist_filter', 'exclusive', function(n, _, prevdepth) return prepend_prevdepth(n, prevdepth) end)
-luatexbase.create_callback('pre_append_to_vlist_filter', 'list', false)
+luatexbase.create_callback('append_to_vlist_filter', 'exclusive',
+                           function(n, _, prevdepth)
+                             return prepend_prevdepth(n, prevdepth)
+                           end)
+luatexbase.create_callback('pre_append_to_vlist_filter',
+                           'list', false)
 %    \end{macrocode}
 % \iffalse
 %</callback>
@@ -137,6 +167,8 @@ local vlist_t = node.id'vlist'
 local kern_t = node.id'kern'
 local glue_t = node.id'glue'
 
+local char_given = token.command_id'char_given'
+
 local underlineattrs = {}
 local underline_types = {}
 local function new_underline_type()
@@ -144,7 +176,7 @@ local function new_underline_type()
   table.insert(underline_types, b.head)
   b.head = nil
   node.flush_node(b)
-  token.put_next(token.new(#underline_types, token.command_id'char_given'))
+  token.put_next(token.new(#underline_types, char_given))
 end
 local function set_underline()
   local j
@@ -156,14 +188,17 @@ local function set_underline()
     end
   end
   if not j then
-    j = luatexbase.new_attribute("luaul" .. tostring(#underlineattrs+1))
+    j = luatexbase.new_attribute(
+        "luaul" .. tostring(#underlineattrs+1))
     underlineattrs[#underlineattrs+1] = j
   end
   tex.attribute[j] = token.scan_int()
 end
 local functions = lua.get_functions_table()
-local new_underline_type_func = luatexbase.new_luafunction"luaul.new_underline_type"
-local set_underline_func = luatexbase.new_luafunction"luaul.set_underline_func"
+local new_underline_type_func =
+    luatexbase.new_luafunction"luaul.new_underline_type"
+local set_underline_func =
+    luatexbase.new_luafunction"luaul.set_underline_func"
 token.set_lua("LuaULNewUnderlineType", new_underline_type_func)
 token.set_lua("LuaULSetUnderline", set_underline_func, "protected")
 functions[new_underline_type_func] = new_underline_type
@@ -237,7 +272,8 @@ local function filter(b, loc, prev, mirror)
   return true
 end
 require'pre_append_to_vlist_filter'
-luatexbase.add_to_callback('pre_append_to_vlist_filter', filter, 'add underlines to list')
+luatexbase.add_to_callback('pre_append_to_vlist_filter',
+                           filter, 'add underlines to list')
 %    \end{macrocode}
 % \iffalse
 %</luacode>
@@ -259,17 +295,52 @@ luatexbase.add_to_callback('pre_append_to_vlist_filter', filter, 'add underlines
 % For other engines we show an error.
 %    \begin{macrocode}
 \ifx\directlua\undefined
-  \PackageError{luaul}{LuaLaTeX required}{LuaUL requires LuaLaTeX. Maybe you forgot to switch the engines?}
+  \PackageError{luaul}{LuaLaTeX required}%
+  {LuaUL requires LuaLaTeX. Maybe you forgot to switch the engines?}
 \fi
 \directlua{require'luaul'}
 %    \end{macrocode}
+% We support some options. Especially \verb+minimal+ will disable the predefined commands \verb+\underLine+ and \verb+\strikeThrough+ and allow you to define similar commands with your custom settings instead, \verb+soul+ tries to replicate names of the \verb soul  package.
+%    \begin{macrocode}
+\newif\ifluaul@predefined
+\newif\ifluaol@soulnames
+\luaul@predefinedtrue
+\DeclareOption{minimal}{\luaul@predefinedfalse}
+\DeclareOption{soul}{\luaul@soulnamestrue}
+\ProcessOptions\relax
+%    \end{macrocode}
+% Just one more tiny helper.
+%    \begin{macrocode}
+\protected\def\luaul@maybedefineuse#1#2{%
+  \unless\ifcsname#1\endcsname
+    \expandafter\xdef\csname#1\endcsname{#2}%
+  \fi
+  \csname#1\endcsname
+}
+
+%    \end{macrocode}
+% The two main macros.
 %    \begin{macrocode}
 \newcommand\newunderlinetype[2]{%
   \newcommand#1{}% "Reserve" the name
-  \edef#1##1{{\LuaULSetUnderline\LuaULNewUnderlineType\hbox{#2\hskip0pt}##1}}%
+  \edef#1##1{{%
+    \LuaULSetUnderline\LuaULNewUnderlineType\hbox{#2\hskip0pt}##1%
+  }}%
 }
-% \newunderlinetype\underLine{\leaders\vrule height-1ptdepth1.5pt}
-% \newunderlinetype\strikeThrough{\leaders\vrule height2.5ptdepth-2pt}
+\newcommand\newexscaledunderlinetype[2]{%
+  \newcommand#1{}% "Reserve" the name
+  \edef#1##1{{%
+    \luaul@maybedefineuse
+      {\csstring#1@@\noexpand\number\dimexpr1ex\relax}%
+      {\LuaULSetUnderline
+        \noexpand\LuaULNewUnderlineType\hbox{#2\hskip0pt}%
+  }##1}}%
+}
+\ifluaul@predefined
+  \newexscaledunderlinetype\underLine
+    {\leaders\vrule height -.65ex depth .75ex}
+  \newunderlinetype\strikeThrough
+    {\leaders\vrule height .55ex depth -.45ex}
 % \newunderlinetype\underDuck{\cleaders\hbox{%
 %     \begin{tikzpicture}[baseline=3,scale=0.05]%
 %       \duck
@@ -284,9 +355,9 @@ luatexbase.add_to_callback('pre_append_to_vlist_filter', filter, 'add underlines
 %       \qbezier(2,0)(3,-1)(4,0)
 %     \end{picture}%
 % }}
+\fi
 %    \end{macrocode}
 % \iffalse
 %</package>
 % \fi
 % \Finale
-% \end{document}
