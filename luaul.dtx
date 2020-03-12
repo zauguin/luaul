@@ -203,7 +203,7 @@ local prepend_prevdepth = node.prepend_prevdepth
 local callback_define
 
 %    \end{macrocode}
-% HACK: Do not do this at home! We need to define the engine callback diectly,
+% HACK: Do not do this at home! We need to define the engine callback directly,
 % so we use the debug library to get the ``real'' \verb+callback.define+:
 %    \begin{macrocode}
 for i=1,5 do
@@ -318,8 +318,8 @@ local new_underline_type_func =
     luatexbase.new_luafunction"luaul.new_underline_type"
 local set_underline_func =
     luatexbase.new_luafunction"luaul.set_underline_func"
-token.set_lua("LuaULNewUnderlineType", new_underline_type_func)
-token.set_lua("LuaULSetUnderline", set_underline_func, "protected")
+token.set_lua("LuauLNewUnderlineType", new_underline_type_func)
+token.set_lua("LuauLSetUnderline", set_underline_func, "protected")
 functions[new_underline_type_func] = new_underline_type
 functions[set_underline_func] = set_underline
 
@@ -415,7 +415,8 @@ luatexbase.add_to_callback('pre_append_to_vlist_filter',
 %    \begin{macrocode}
 \ifx\directlua\undefined
   \PackageError{luaul}{LuaLaTeX required}%
-  {LuaUL requires LuaLaTeX. Maybe you forgot to switch the engine in your editor?}
+  {LuauL requires LuaLaTeX.
+   Maybe you forgot to switch the engine in your editor?}
 \fi
 \directlua{require'luaul'}
 \RequirePackage{xparse}
@@ -446,8 +447,8 @@ luatexbase.add_to_callback('pre_append_to_vlist_filter',
   \protected\def#1{%
     \expandafter\luaul@maybedefineuse
       \expanded{{\csstring#1@@#2}}%
-      {\LuaULSetUnderline
-        \LuaULNewUnderlineType\hbox{#3\hskip0pt}%
+      {\LuauLSetUnderline
+        \LuauLNewUnderlineType\hbox{#3\hskip0pt}%
   }}%
 }
 \ifluaul@predefined
