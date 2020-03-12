@@ -57,12 +57,12 @@
 %
 % \catcode`\§=14
 % \newunderlinetype\beginUnderDuck{\cleaders\hbox{§
-%   \begin{tikzpicture}[x=.5ex,y=.5ex,baseline=3]§
+%   \begin{tikzpicture}[x=.5ex,y=.5ex,baseline=.8ex]§
 %     \duck
 %   \end{tikzpicture}§
 % }}
 % \newcommand\underDuck[1]{{\beginUnderDuck#1}}
-% \newunderlinetype\beginUnderWavy{\cleaders\hbox{§
+% \newunderlinetype\beginUnderWavy[\number\dimexpr1ex]{\cleaders\hbox{§
 %     \setlength\unitlength{.3ex}§
 %     \begin{picture}(4,0)(0,1)
 %       \thicklines
@@ -128,27 +128,34 @@
 % For this, use\\
 % \verb+\newunderlinetype+\meta{macro name}\verb+[+\meta{context specifier}\verb+]{+\meta{\texttt{\string\leaders} command}\verb+}+
 %
-% First, you have to pass the name of your new command, then you can specify which context is used.
-% This \enquote{context} has to expand to a string (which can appear in a csname)
-% and decides how often the leaders box has to recalculated. So if your leaders should depend on the fontsize,
+% First, you have to pass the name of the command which should enable your new kind of underlining.
+% (If you want to have an additional command which takes an argument and underlines this argument,
+% you will have to define this manually.)
+% The optional argument provides a \enquote{context}: This \enquote{context} has to expand to a string
+% (something that can appear in a csname) which changes if the leaders box should be recalculated.
+% The leader will be chached and reused whenever the context evaluates to the same string.
+% So if your leaders should depend on the fontsize,
 % the expansion of the context should contain the font size. If you leaders contain text in the current font,
-% Your context should include \verb+\fontname+. The default context includes the current size of \texttt{1ex}
+% your context should include \verb+\fontname+. The default context includes the current size of \texttt{1ex}
 % and the current color if luacolor is loaded.
 %
 % The final argument contains the actual leader command. You should omit the final glue normally passed to \verb+\leaders+,
 % so e.g.\ write \verb+\leaders\hbox{ . }+ without appending \verb+\hfill+ or \verb+\hskip1pt+ etc.
+% The height and depth of your leaders is ignored to ensure that adding underlines etc. does not change the general text layout.
+% It is your responsibility to ensure that you are not too high or too low and intercept other lines. On the other hand,
+% running dimensions work fine if you use a rule.
 %
 % For example, the special underline commands demonstrated above are implemented as
 %
 % \begin{verbatim}
 % \usepackage{luacolor,tikzducks,pict2e}
 % \newunderlinetype\beginUnderDuck{\cleaders\hbox{%
-%   \begin{tikzpicture}[x=.5ex,y=.5ex,baseline=3]%
+%   \begin{tikzpicture}[x=.5ex,y=.5ex,baseline=.8ex]%
 %     \duck
 %   \end{tikzpicture}%
 % }}
 % \newcommand\underDuck[1]{{\beginUnderDuck#1}}
-% \newunderlinetype\beginUnderWavy{\cleaders\hbox{%
+% \newunderlinetype\beginUnderWavy[\number\dimexpr1ex]{\cleaders\hbox{%
 %     \setlength\unitlength{.3ex}%
 %     \begin{picture}(4,0)(0,1)
 %       \thicklines
@@ -163,6 +170,8 @@
 % }}
 % \newcommand\StrikeThough[1]{{\beginStrikeThough#1}}
 % \end{verbatim}
+%
+% Here \verb+\underWavy+ uses a custom context because it doesn't change depending on the current font color.
 %
 % If you only want to use \verb+\newunderlinetype+ and do not want to use the predefined underline types, you
 % can use the \texttt{minimal} package option to disable them.
@@ -432,7 +441,7 @@ luatexbase.add_to_callback('pre_append_to_vlist_filter',
 %    \end{macrocode}
 % The main macro.
 %    \begin{macrocode}
-\NewDocumentCommand\newunderlinetype{mO{}m}{%
+\NewDocumentCommand\newunderlinetype{mO{\luaul@defaultcontext}m}{%
   \newcommand#1{}% "Reserve" the name
   \protected\def#1{%
     \expandafter\luaul@maybedefineuse
@@ -448,10 +457,10 @@ luatexbase.add_to_callback('pre_append_to_vlist_filter',
       \the\LuaCol@Attribute
     \fi
   }
-  \newunderlinetype\@underLine[\luaul@defaultcontext]%
+  \newunderlinetype\@underLine%
     {\leaders\vrule height -.65ex depth .75ex}
   \newcommand\underLine[1]{{\@underLine#1}}
-  \newunderlinetype\@strikeThrough[\luaul@defaultcontext]%
+  \newunderlinetype\@strikeThrough%
     {\leaders\vrule height .55ex depth -.45ex}
   \newcommand\strikeThrough[1]{{\@strikeThrough#1}}
   \newunderlinetype\@highLight[\number\dimexpr1ex]%
