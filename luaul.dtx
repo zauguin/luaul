@@ -42,7 +42,7 @@
 %<*driver>
 \documentclass{article}
 \usepackage{luaul}
-\usepackage{doc,framed,metalogo,hyperref}
+\usepackage{csquotes,doc,framed,metalogo,hyperref,luacolor,tikzducks,pict2e}
 \begin{document}
 \DocInput{luaul.dtx}
 \PrintIndex
@@ -54,6 +54,29 @@
 %</gobble>
 % \fi
 %
+%
+% \catcode`\§=14
+% \newunderlinetype\beginUnderDuck{\cleaders\hbox{§
+%   \begin{tikzpicture}[x=.5ex,y=.5ex,baseline=3]§
+%     \duck
+%   \end{tikzpicture}§
+% }}
+% \newcommand\underDuck[1]{{\beginUnderDuck#1}}
+% \newunderlinetype\beginUnderWavy{\cleaders\hbox{§
+%     \setlength\unitlength{.3ex}§
+%     \begin{picture}(4,0)(0,1)
+%       \thicklines
+%       \color{red}§
+%       \qbezier(0,0)(1,1)(2,0)
+%       \qbezier(2,0)(3,-1)(4,0)
+%     \end{picture}§
+% }}
+% \newcommand\underWavy[1]{{\beginUnderWavy#1}}
+% \newunderlinetype\beginStrikeThough{\leaders\hbox{§
+%     \normalfont\bfseries/§
+% }}
+% \newcommand\StrikeThough[1]{{\beginStrikeThough#1}}
+%
 % \newcommand\Luaul{LuauL}
 % \newcommand\luaul{LuauL}
 % \GetFileInfo{luaul.sty}
@@ -62,10 +85,13 @@
 % \author{Marcel Kr\"uger \\ \href{mailto:tex@2krueger.de}{tex@2krueger.de}}
 %
 % \maketitle
+% \section{User-level interface}
 % \Luaul\ uses new capabilities of the LuaTeX engine to provide
 % underlining/\hspace{0pt}strikethrough/\hspace{0pt}highlighting
 % etc.\ support without breaking ligatures, kerning or restricting input.
-% The two main commands are \verb+\underLine+ and \verb+\strikeThrough+. They are used as
+% The predefined user-level commands are \verb+\underLine+, \verb+\highLight+, and \verb+\strikeThrough+.
+% (\verb+\highLight+ will only work correctly if the \texttt{luacolor} package is loaded)
+% They are used as
 %
 % \begin{verbatim}
 %   \documentclass{article}
@@ -79,6 +105,68 @@
 %   This package is \strikeThrough{useless}\underLine{awesome}!
 % \end{framed}
 %
+% For limited compatibility with \texttt{soul}, the \texttt{soul} package option allows you
+% to use the traditional macro names from \texttt{soul} instead:
+%
+% \begin{verbatim}
+%   \documentclass{article}
+%   \usepackage[soul]{luaul}
+%   \begin{document}
+%   This package is \st{useless}\ul{awesome}!
+%   \end{document}
+% \end{verbatim}
+%
+% \section{Expert interface}
+% \DescribeMacro{\newunderlinetype}§
+% Sometimes, you might try to solve more interesting problems than boring underlining,
+% strikethrough or highlighting. Maybe you always wanted \underWavy{to be your own
+% spell checker}, want to demonstrate \underDuck{your love for ducks} or you think
+% that the traditional \verb+\strikeThrough+ \StrikeThough{is not visible enough}.
+% For all these cases, you can define your own \enquote{underlining} command based on a \TeX\
+% \verb+\[cxg]leaders+ command.
+% 
+% For this, use\\
+% \verb+\newunderlinetype+\meta{macro name}\verb+[+\meta{context specifier}\verb+]{+\meta{\texttt{\string\leaders} command}\verb+}+
+%
+% First, you have to pass the name of your new command, then you can specify which context is used.
+% This \enquote{context} has to expand to a string (which can appear in a csname)
+% and decides how often the leaders box has to recalculated. So if your leaders should depend on the fontsize,
+% the expansion of the context should contain the font size. If you leaders contain text in the current font,
+% Your context should include \verb+\fontname+. The default context includes the current size of \texttt{1ex}
+% and the current color if luacolor is loaded.
+%
+% The final argument contains the actual leader command. You should omit the final glue normally passed to \verb+\leaders+,
+% so e.g.\ write \verb+\leaders\hbox{ . }+ without appending \verb+\hfill+ or \verb+\hskip1pt+ etc.
+%
+% For example, the special underline commands demonstrated above are implemented as
+%
+% \begin{verbatim}
+% \usepackage{luacolor,tikzducks,pict2e}
+% \newunderlinetype\beginUnderDuck{\cleaders\hbox{%
+%   \begin{tikzpicture}[x=.5ex,y=.5ex,baseline=3]%
+%     \duck
+%   \end{tikzpicture}%
+% }}
+% \newcommand\underDuck[1]{{\beginUnderDuck#1}}
+% \newunderlinetype\beginUnderWavy{\cleaders\hbox{%
+%     \setlength\unitlength{.3ex}%
+%     \begin{picture}(4,0)(0,1)
+%       \thicklines
+%       \color{red}%
+%       \qbezier(0,0)(1,1)(2,0)
+%       \qbezier(2,0)(3,-1)(4,0)
+%     \end{picture}%
+% }}
+% \newcommand\underWavy[1]{{\beginUnderWavy#1}}
+% \newunderlinetype\beginStrikeThough{\leaders\hbox{%
+%     \normalfont\bfseries/%
+% }}
+% \newcommand\StrikeThough[1]{{\beginStrikeThough#1}}
+% \end{verbatim}
+%
+% If you only want to use \verb+\newunderlinetype+ and do not want to use the predefined underline types, you
+% can use the \texttt{minimal} package option to disable them.
+% 
 % \StopEventually{}
 % \section{The implementation}
 % \subsection{Helper modules}
@@ -288,7 +376,7 @@ function add_underline_h(head, attr)
   end
 end
 local function filter(b, loc, prev, mirror)
-  for i = 1,#underlineattrs do
+  for i = 1, #underlineattrs do
     add_underline_v(b, underlineattrs[i])
   end
   return true
@@ -310,7 +398,7 @@ luatexbase.add_to_callback('pre_append_to_vlist_filter',
 \NeedsTeXFormat{LaTeX2e}
 \ProvidesPackage
   {luaul}
-  [2020/03/08 v0.0.1 Underlining and related functionality for LuaTeX]
+  [2020/03/12 v0.0.1 Underlining and related functionality for LuaTeX]
 
 % \fi
 % Only \LuaLaTeX{} is supported.
@@ -318,7 +406,7 @@ luatexbase.add_to_callback('pre_append_to_vlist_filter',
 %    \begin{macrocode}
 \ifx\directlua\undefined
   \PackageError{luaul}{LuaLaTeX required}%
-  {LuaUL requires LuaLaTeX. Maybe you forgot to switch the engines?}
+  {LuaUL requires LuaLaTeX. Maybe you forgot to switch the engine in your editor?}
 \fi
 \directlua{require'luaul'}
 \RequirePackage{xparse}
@@ -346,12 +434,12 @@ luatexbase.add_to_callback('pre_append_to_vlist_filter',
 %    \begin{macrocode}
 \NewDocumentCommand\newunderlinetype{mO{}m}{%
   \newcommand#1{}% "Reserve" the name
-  \protected\def#1##1{{%
+  \protected\def#1{%
     \expandafter\luaul@maybedefineuse
       \expanded{{\csstring#1@@#2}}%
       {\LuaULSetUnderline
         \LuaULNewUnderlineType\hbox{#3\hskip0pt}%
-  }##1}}%
+  }}%
 }
 \ifluaul@predefined
   \newcommand\luaul@defaultcontext{%
@@ -360,12 +448,15 @@ luatexbase.add_to_callback('pre_append_to_vlist_filter',
       \the\LuaCol@Attribute
     \fi
   }
-  \newunderlinetype\underLine[\luaul@defaultcontext]%
+  \newunderlinetype\@underLine[\luaul@defaultcontext]%
     {\leaders\vrule height -.65ex depth .75ex}
-  \newunderlinetype\strikeThrough[\luaul@defaultcontext]%
+  \newcommand\underLine[1]{{\@underLine#1}}
+  \newunderlinetype\@strikeThrough[\luaul@defaultcontext]%
     {\leaders\vrule height .55ex depth -.45ex}
-  \newunderlinetype\highLight[\number\dimexpr1ex]%
+  \newcommand\strikeThrough[1]{{\@strikeThrough#1}}
+  \newunderlinetype\@highLight[\number\dimexpr1ex]%
     {\color{yellow}\leaders\vrule height 1.75ex depth .75ex}
+  \newcommand\highLight[1]{{\@highLight#1}}
   \ifluaul@soulnames
     \let\textul\underLine \let\ul\textul
     \let\textst\strikeThrough \let\st\textst
