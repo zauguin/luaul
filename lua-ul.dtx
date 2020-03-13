@@ -27,11 +27,11 @@
 \endpostamble
 \def\MetaPrefix{--}
 \generate{%
-  \file{luaul.lua}{\from{luaul.dtx}{luacode}}%
-  \file{pre_append_to_vlist_filter.lua}{\from{luaul.dtx}{callback}}%
+  \file{lua-ul.lua}{\from{lua-ul.dtx}{luacode}}%
+  \file{pre_append_to_vlist_filter.lua}{\from{lua-ul.dtx}{callback}}%
 }
 \let\MetaPrefix\DoubleperCent
-\generate{\file{luaul.sty}{\from{luaul.dtx}{package}}}
+\generate{\file{lua-ul.sty}{\from{lua-ul.dtx}{package}}}
 \endbatchfile
 %</batch>
 %<*gobble>
@@ -41,10 +41,10 @@
 %</gobble>
 %<*driver>
 \documentclass{article}
-\usepackage{luaul}
+\usepackage{lua-ul}
 \usepackage{csquotes,doc,framed,metalogo,hyperref,luacolor,tikzducks,pict2e}
 \begin{document}
-\DocInput{luaul.dtx}
+\DocInput{lua-ul.dtx}
 \PrintIndex
 \PrintChanges
 \end{document}
@@ -77,9 +77,9 @@
 % }}
 % \newcommand\StrikeThough[1]{{\beginStrikeThough#1}}
 %
-% \newcommand\Luaul{LuauL}
-% \newcommand\luaul{LuauL}
-% \GetFileInfo{luaul.sty}
+% \newcommand\Luaul{Lua-UL}
+% \newcommand\luaul{Lua-UL}
+% \GetFileInfo{lua-ul.sty}
 % \title{The \luaul\ package\thanks{This document
 %        corresponds to \luaul~\fileversion, dated~\filedate.}}
 % \author{Marcel Kr\"uger \\ \href{mailto:tex@2krueger.de}{tex@2krueger.de}}
@@ -95,7 +95,7 @@
 %
 % \begin{verbatim}
 %   \documentclass{article}
-%   \usepackage{luaul}
+%   \usepackage{lua-ul}
 %   \begin{document}
 %   This package is \strikeThrough{useless}\underLine{awesome}!
 %   \end{document}
@@ -110,7 +110,7 @@
 %
 % \begin{verbatim}
 %   \documentclass{article}
-%   \usepackage[soul]{luaul}
+%   \usepackage[soul]{lua-ul}
 %   \begin{document}
 %   This package is \st{useless}\ul{awesome}!
 %   \end{document}
@@ -254,7 +254,7 @@ luatexbase.create_callback('pre_append_to_vlist_filter',
 % Now we can define our main Lua module:
 % \iffalse
 %<*gobble>
-\begin{docstrip-luacode}{luaul}
+\begin{docstrip-luacode}{lua-ul}
 %</gobble>
 %<*luacode>
 % \fi
@@ -318,8 +318,8 @@ local new_underline_type_func =
     luatexbase.new_luafunction"luaul.new_underline_type"
 local set_underline_func =
     luatexbase.new_luafunction"luaul.set_underline_func"
-token.set_lua("LuauLNewUnderlineType", new_underline_type_func)
-token.set_lua("LuauLSetUnderline", set_underline_func, "protected")
+token.set_lua("LuaULNewUnderlineType", new_underline_type_func)
+token.set_lua("LuaULSetUnderline", set_underline_func, "protected")
 functions[new_underline_type_func] = new_underline_type
 functions[set_underline_func] = set_underline
 
@@ -406,7 +406,7 @@ luatexbase.add_to_callback('pre_append_to_vlist_filter',
 %<*package>
 \NeedsTeXFormat{LaTeX2e}
 \ProvidesPackage
-  {luaul}
+  {lua-ul}
   [2020/03/12 v0.0.1 Underlining and related functionality for LuaTeX]
 
 % \fi
@@ -414,11 +414,11 @@ luatexbase.add_to_callback('pre_append_to_vlist_filter',
 % For other engines we show an error.
 %    \begin{macrocode}
 \ifx\directlua\undefined
-  \PackageError{luaul}{LuaLaTeX required}%
-  {LuauL requires LuaLaTeX.
+  \PackageError{lua-ul}{LuaLaTeX required}%
+  {Lua-UL requires LuaLaTeX.
    Maybe you forgot to switch the engine in your editor?}
 \fi
-\directlua{require'luaul'}
+\directlua{require'lua-ul'}
 \RequirePackage{xparse}
 %    \end{macrocode}
 % We support some options. Especially \verb+minimal+ will disable the predefined commands \verb+\underLine+ and \verb+\strikeThrough+ and allow you to define similar commands with your custom settings instead, \verb+soul+ tries to replicate names of the \verb soul  package.
@@ -447,8 +447,8 @@ luatexbase.add_to_callback('pre_append_to_vlist_filter',
   \protected\def#1{%
     \expandafter\luaul@maybedefineuse
       \expanded{{\csstring#1@@#2}}%
-      {\LuauLSetUnderline
-        \LuauLNewUnderlineType\hbox{#3\hskip0pt}%
+      {\LuaULSetUnderline
+        \LuaULNewUnderlineType\hbox{#3\hskip0pt}%
   }}%
 }
 \ifluaul@predefined
