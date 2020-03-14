@@ -407,9 +407,10 @@ function add_underline_h(head, attr)
     local width = node.rangedimensions(head, first)
     local kern = node.new(kern_t)
     kern.kern = -width
-    kern.next = node.copy(underline_types[last_value])
-    kern.next.width = width
-    node.tail(head.head).next = kern
+    local lead = node.copy(underline_types[last_value])
+    lead.width = width
+    head.head = node.insert_before(head.head, first, lead)
+    node.insert_after(head, lead, kern)
   end
 end
 local function filter(b, loc, prev, mirror)
