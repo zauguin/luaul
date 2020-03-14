@@ -313,15 +313,43 @@ local function set_underline()
   end
   tex.attribute[j] = token.scan_int()
 end
+local function reset_underline()
+  local reset_all = token.scan_keyword'*'
+  local j
+  for i=1,#underlineattrs do
+    local attr = underlineattrs[i]
+    if tex.attribute[attr] ~= -0x7FFFFFFF then
+      if reset_all then
+        tex.attribute[attr] = -0x7FFFFFFF
+      else
+        j = attr
+      end
+    end
+  end
+  if not j then
+    if not reset_all then
+      tex.error("No underline active", {"You tried to disable underlining \z
+          but underlining was not active", "in the first place. Maybe you wanted \z
+          to ensure that no underling can be active anymore?", "Then you should \z
+          append a *."})
+    end
+    return
+  end
+  tex.attribute[j] = -0x7FFFFFFF
+end
 local functions = lua.get_functions_table()
 local new_underline_type_func =
     luatexbase.new_luafunction"luaul.new_underline_type"
 local set_underline_func =
     luatexbase.new_luafunction"luaul.set_underline_func"
+local reset_underline_func =
+    luatexbase.new_luafunction"luaul.reset_underline_func"
 token.set_lua("LuaULNewUnderlineType", new_underline_type_func)
 token.set_lua("LuaULSetUnderline", set_underline_func, "protected")
+token.set_lua("LuaULResetUnderline", reset_underline_func, "protected")
 functions[new_underline_type_func] = new_underline_type
 functions[set_underline_func] = set_underline
+functions[reset_underline_func] = reset_underline
 
 local add_underline_h
 local function add_underline_v(head, attr)
