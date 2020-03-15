@@ -1,3 +1,6 @@
 *.log
 *.aux
 *.out
+*.glo
+*.gls
+*.ilg
