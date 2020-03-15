@@ -503,6 +503,29 @@ luatexbase.add_to_callback('pre_append_to_vlist_filter',
   \fi
 \fi
 %    \end{macrocode}
+% \changes{0.0.2}{Patch \verb+\reset@font+}
+% Finally patch \verb+\reset@font+ to ensure that underlines do not propagate
+% into unexpected places.
+%    \begin{macrocode}
+\ifx \reset@font \normalfont
+  \let \reset@font \relax
+  \DeclareRobustCommand \reset@font {%
+    \normalfont
+    \LuaULResetUnderline*%
+  }
+\else
+  \MakeRobust \reset@font
+  \begingroup
+    \expandafter \let \expandafter \helper \csname reset@font \endcsname
+  \expandafter \endgroup
+  \expandafter \gdef
+    \csname reset@font \expandafter \endcsname
+  \expandafter {%
+    \helper%
+    \LuaULResetUnderline*%
+  }
+\fi
+%    \end{macrocode}
 % \iffalse
 %</package>
 % \fi
