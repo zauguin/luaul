@@ -314,10 +314,10 @@ local function new_underline_type()
       \\leaders, \\cleaders, or \\xleader, or \\gleaders here."})
   else
     if lead.next then
-    tex.error("Too many nodes", {"An underline type can only be \z
-        defined by a single leaders specification,", "not by \z
-        multiple nodes. Maybe you supplied an additional glue?",
-        "Anyway, the additional nodes will be ignored"})
+      tex.error("Too many nodes", {"An underline type can only be \z
+          defined by a single leaders specification,", "not by \z
+          multiple nodes. Maybe you supplied an additional glue?",
+          "Anyway, the additional nodes will be ignored"})
     end
     table.insert(underline_types, lead)
     b.head = lead.next
