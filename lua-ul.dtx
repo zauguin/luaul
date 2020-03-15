@@ -116,6 +116,32 @@
 %   \end{document}
 % \end{verbatim}
 %
+% The \verb+\highLight+ command highlights the argument in yellow by default. This color can be changed
+% either by providinga color as optional argument or by chnaging the default through \verb+\LuaULSetHighLightColor+:
+%
+% \begin{verbatim}
+%   \documentclass{article}
+%   \usepackage{xcolor,luacolor,lua-ul}
+%   \LuaULSetHighLightColor{green}
+%   \begin{document}
+%   Lots of stuff is \highLight{important enough to be highlighted},
+%   but only few things are dangerous enough to deserve
+%   \highLight[red]{red highlighting.}
+%
+%   \LuaULSetHighLightColor{yellow}
+%   Let's go back to traditional \highLight{highlighting}.
+%   \end{document}
+% \end{verbatim}
+%
+% \begin{framed}
+%   \LuaULSetHighLightColor{green}
+%   Lots of stuff is \highLight{important enough to be highlighted}, but only few things deserve
+%   are dangerous enough to deserve a \highLight[red]{red highlighting.}
+%
+%   \LuaULSetHighLightColor{yellow}
+%   Let's go back to traditional \highLight{highlighting}.
+% \end{framed}
+%
 % \section{Expert interface}
 % \DescribeMacro{\newunderlinetype}§
 % Sometimes, you might try to solve more interesting problems than boring underlining,
@@ -467,7 +493,19 @@ luatexbase.add_to_callback('pre_append_to_vlist_filter',
   \fi
   \csname#1\endcsname
 }
-
+%    \end{macrocode}
+% The default for the context argument. Give that most stuff should
+% scale vertically with the font size, we expect most arguments
+% to be given in \texttt{ex}. Additionally especially traditional
+% underlines will use the currently active text color, so especially
+% when luacolor is loaded we have to include the color attribute too.
+%    \begin{macrocode}
+  \newcommand\luaul@defaultcontext{%
+    \number\dimexpr1ex
+    @\unless\ifx\undefined\LuaCol@Attribute
+      \the\LuaCol@Attribute
+    \fi
+  }
 %    \end{macrocode}
 % The main macro.
 %    \begin{macrocode}
@@ -481,21 +519,55 @@ luatexbase.add_to_callback('pre_append_to_vlist_filter',
   }}%
 }
 \ifluaul@predefined
-  \newcommand\luaul@defaultcontext{%
-    \number\dimexpr1ex
-    @\unless\ifx\undefined\LuaCol@Attribute
-      \the\LuaCol@Attribute
+%    \end{macrocode}
+% For \verb+\highLight+, the color should be customizable.
+% There are two cases: If \verb+xcolor+ is not loaded, we just accept
+% a simple color name. Otherwise, we accept color as documented in
+% xcolor for PSTricks: Either a color name, a color expression or a
+% combination of colormodel and associated values.
+%    \begin{macrocode}
+  \newcommand\luaul@highlight@color{yellow}
+  \def\luaul@@setcolor\xcolor@#1#2{}
+  \newcommand\luaul@setcolor[1]{%
+    \ifx\XC@getcolor\undefined
+      \def\luaul@highlight@currentcolor{#1}
+    \else
+      \begingroup
+        \XC@getcolor{#1}\luaul@tmpcolor
+      \expanded{\endgroup
+        \def\noexpand\luaul@highlight@currentcolor{\expandafter\luaul@@setcolor\luaul@tmpcolor}}%
     \fi
   }
+%    \end{macrocode}
+% Now a user-level command to set the default color.
+%    \begin{macrocode}
+\NewDocumentCommand\LuaULSetHighLightColor{om}{%
+  \edef\luaul@highlight@color{\IfValueTF{#1}{[#1]{#2}}{#2}}%
+}
+%    \end{macrocode}
+% The sizes for the predefined commands are stolen from the \enquote{soul}
+% default values.
+%    \begin{macrocode}
   \newunderlinetype\@underLine%
     {\leaders\vrule height -.65ex depth .75ex}
   \newcommand\underLine[1]{{\@underLine#1}}
   \newunderlinetype\@strikeThrough%
     {\leaders\vrule height .55ex depth -.45ex}
   \newcommand\strikeThrough[1]{{\@strikeThrough#1}}
-  \newunderlinetype\@highLight[\number\dimexpr1ex]%
-    {\color{yellow}\leaders\vrule height 1.75ex depth .75ex}
-  \newcommand\highLight[1]{{\@highLight#1}}
+
+  \newunderlinetype\@highLight[\number\dimexpr1ex@\luaul@highlight@currentcolor]%
+    {%
+      \ifx\XC@getcolor\undefined
+        \color{\luaul@highlight@currentcolor}%
+      \else
+        \expandafter\XC@undeclaredcolor\luaul@highlight@currentcolor
+      \fi
+      \leaders\vrule height 1.75ex depth .75ex
+    }
+  \newcommand\highLight[2][\luaul@highlight@color]{{%
+    \luaul@setcolor{#1}%
+    \@highLight#2%
+  }}
   \ifluaul@soulnames
     \let\textul\underLine \let\ul\textul
     \let\textst\strikeThrough \let\st\textst
