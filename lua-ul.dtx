@@ -391,6 +391,7 @@ local function add_underline_v(head, attr)
       add_underline_h(n, attr)
     elseif head.id == vlist_t then
       add_underline_v(n.head, attr)
+      node.set_attribute(n, attr, 0)
     end
   end
 end
@@ -401,12 +402,20 @@ function add_underline_h(head, attr)
   local first
   for n in node.traverse(head.head) do
     local new_value = node.has_attribute(n, attr)
+    if new_value then
+      if new_value > 0 then
+        node.set_attribute(n, attr, -new_value)
+      else
+        new_value = nil
+      end
+    end
     if n.id == hlist_t then
       new_value = nil
       add_underline_h(n, attr)
     elseif n.id == vlist_t then
       new_value = nil
       add_underline_v(n.head, attr)
+      node.set_attribute(n, attr, 0)
     elseif n.id == kern_t and n.subtype == 0 then
       if n.next and not node.has_attribute(n.next, attr) then
         new_value = nil
@@ -445,6 +454,7 @@ function add_underline_h(head, attr)
     head.head = node.insert_before(head.head, first, lead)
     node.insert_after(head, lead, kern)
   end
+  node.set_attribute(head, attr, 0)
 end
 local function filter(b, loc, prev, mirror)
   for i = 1, #underlineattrs do
