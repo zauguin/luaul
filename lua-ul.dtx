@@ -43,6 +43,7 @@
 \documentclass{article}
 \usepackage{lua-ul}
 \usepackage{csquotes,doc,framed,metalogo,hyperref,luacolor,tikzducks,pict2e}
+\RecordChanges
 \begin{document}
 \DocInput{lua-ul.dtx}
 \PrintIndex
@@ -204,6 +205,7 @@
 % 
 % \StopEventually{}
 % \section{The implementation}
+% \changes{0.0.1}{2020-03-12}{Initial release}
 % \subsection{Helper modules}
 % First we need a separate Lua module \verb+pre_append_to_vlist_filter+ which
 % provides a variant of the \verb+append_to_vlist_filter+ callback which can be
@@ -339,6 +341,9 @@ local function set_underline()
   end
   tex.attribute[j] = token.scan_int()
 end
+%    \end{macrocode}
+% \changes{0.0.2}{2020-03-15}{Add command to disable active underlining}
+%    \begin{macrocode}
 local function reset_underline()
   local reset_all = token.scan_keyword'*'
   local j
@@ -354,25 +359,27 @@ local function reset_underline()
   end
   if not j then
     if not reset_all then
-      tex.error("No underline active", {"You tried to disable underlining \z
-          but underlining was not active", "in the first place. Maybe you wanted \z
-          to ensure that no underling can be active anymore?", "Then you should \z
-          append a *."})
+      tex.error("No underline active", {"You tried to disable \z
+            underlining but underlining was not active",
+            "in the first place. Maybe you wanted to ensure that \z
+            no underling can be active anymore?", "Then you should \z
+            append a *."})
     end
     return
   end
   tex.attribute[j] = -0x7FFFFFFF
 end
 local functions = lua.get_functions_table()
+local set_lua = token.set_lua
 local new_underline_type_func =
     luatexbase.new_luafunction"luaul.new_underline_type"
 local set_underline_func =
     luatexbase.new_luafunction"luaul.set_underline_func"
 local reset_underline_func =
     luatexbase.new_luafunction"luaul.reset_underline_func"
-token.set_lua("LuaULNewUnderlineType", new_underline_type_func)
-token.set_lua("LuaULSetUnderline", set_underline_func, "protected")
-token.set_lua("LuaULResetUnderline", reset_underline_func, "protected")
+set_lua("LuaULNewUnderlineType", new_underline_type_func)
+set_lua("LuaULSetUnderline", set_underline_func, "protected")
+set_lua("LuaULResetUnderline", reset_underline_func, "protected")
 functions[new_underline_type_func] = new_underline_type
 functions[set_underline_func] = set_underline
 functions[reset_underline_func] = reset_underline
@@ -520,6 +527,7 @@ luatexbase.add_to_callback('pre_append_to_vlist_filter',
 }
 \ifluaul@predefined
 %    \end{macrocode}
+% \changes{0.0.2}{2020-03-15}{Allow \texttt{\protect\string\protect\highLight} color customization}
 % For \verb+\highLight+, the color should be customizable.
 % There are two cases: If \verb+xcolor+ is not loaded, we just accept
 % a simple color name. Otherwise, we accept color as documented in
@@ -535,7 +543,8 @@ luatexbase.add_to_callback('pre_append_to_vlist_filter',
       \begingroup
         \XC@getcolor{#1}\luaul@tmpcolor
       \expanded{\endgroup
-        \def\noexpand\luaul@highlight@currentcolor{\expandafter\luaul@@setcolor\luaul@tmpcolor}}%
+        \def\noexpand\luaul@highlight@currentcolor{%
+          \expandafter\luaul@@setcolor\luaul@tmpcolor}}%
     \fi
   }
 %    \end{macrocode}
@@ -555,7 +564,8 @@ luatexbase.add_to_callback('pre_append_to_vlist_filter',
     {\leaders\vrule height .55ex depth -.45ex}
   \newcommand\strikeThrough[1]{{\@strikeThrough#1}}
 
-  \newunderlinetype\@highLight[\number\dimexpr1ex@\luaul@highlight@currentcolor]%
+  \newunderlinetype\@highLight[\number\dimexpr1ex@%
+                               \luaul@highlight@currentcolor]%
     {%
       \ifx\XC@getcolor\undefined
         \color{\luaul@highlight@currentcolor}%
@@ -575,7 +585,7 @@ luatexbase.add_to_callback('pre_append_to_vlist_filter',
   \fi
 \fi
 %    \end{macrocode}
-% \changes{0.0.2}{Patch \verb+\reset@font+}
+% \changes{0.0.2}{2020-03-15}{Patch \texttt{\protect\string\protect\reset@font}}
 % Finally patch \verb+\reset@font+ to ensure that underlines do not propagate
 % into unexpected places.
 %    \begin{macrocode}
@@ -588,7 +598,9 @@ luatexbase.add_to_callback('pre_append_to_vlist_filter',
 \else
   \MakeRobust \reset@font
   \begingroup
-    \expandafter \let \expandafter \helper \csname reset@font \endcsname
+    \expandafter \let
+        \expandafter \helper
+        \csname reset@font \endcsname
   \expandafter \endgroup
   \expandafter \gdef
     \csname reset@font \expandafter \endcsname
