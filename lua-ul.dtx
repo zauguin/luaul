@@ -297,6 +297,8 @@ local char_given = token.command_id'char_given'
 
 local underlineattrs = {}
 local underline_types = {}
+local underline_streight_flag = {}
+
 local saved_values = {}
 local function new_underline_type()
   for i=1,#underlineattrs do
@@ -304,6 +306,7 @@ local function new_underline_type()
     saved_values[i] = tex.attribute[attr]
     tex.attribute[attr] = -0x7FFFFFFF
   end
+  local streight_flag = token.scan_keyword'streight'
   local b = token.scan_list()
   for i=1,#underlineattrs do
     tex.attribute[underlineattrs[i]] = saved_values[i]
@@ -325,6 +328,7 @@ local function new_underline_type()
     node.flush_node(b)
   end
   token.put_next(token.new(#underline_types, char_given))
+  underline_streight_flag[#underline_types] = streight_flag
 end
 local function set_underline()
   local j
@@ -454,12 +458,16 @@ function add_underline_h(head, attr)
       end
     end
     if n.id == hlist_t then
-      new_value = nil
-      add_underline_h(n, attr)
+      if (not underline_streight_flag[new_value]) or n.subtype == 3 then
+        new_value = nil
+        add_underline_h(n, attr)
+    end
     elseif n.id == vlist_t then
-      new_value = nil
-      add_underline_v(n.head, attr)
-      node.set_attribute(n, attr, 0)
+      if not underline_streight_flag[new_value] then
+        new_value = nil
+        add_underline_v(n.head, attr)
+        node.set_attribute(n, attr, 0)
+      end
     elseif n.id == kern_t and n.subtype == 0 then
       if n.next and not node.has_attribute(n.next, attr) then
         new_value = nil
@@ -583,13 +591,13 @@ luatexbase.add_to_callback('pre_append_to_vlist_filter',
 %    \end{macrocode}
 % The main macro.
 %    \begin{macrocode}
-\NewDocumentCommand\newunderlinetype{mO{\luaul@defaultcontext}m}{%
-  \newcommand#1{}% "Reserve" the name
-  \protected\def#1{%
+\NewDocumentCommand\newunderlinetype{E{*}{{}}mO{\luaul@defaultcontext}m}{%
+  \newcommand#2{}% "Reserve" the name
+  \protected\def#2{%
     \expandafter\luaul@maybedefineuse
-      \expanded{{\csstring#1@@#2}}%
+      \expanded{{\csstring#2@@#3}}%
       {\LuaULSetUnderline
-        \LuaULNewUnderlineType\hbox{#3\hskip0pt}%
+        \LuaULNewUnderlineType#1\hbox{#4\hskip0pt}%
   }}%
 }
 \ifluaul@predefined
