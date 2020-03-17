@@ -298,6 +298,7 @@ local char_given = token.command_id'char_given'
 local underlineattrs = {}
 local underline_types = {}
 local underline_strict_flag = {}
+local underline_over_flag = {}
 
 local saved_values = {}
 local function new_underline_type()
@@ -307,6 +308,7 @@ local function new_underline_type()
     tex.attribute[attr] = -0x7FFFFFFF
   end
   local strict_flag = token.scan_keyword'strict'
+  local over_flag = token.scan_keyword'over'
   local b = token.scan_list()
   for i=1,#underlineattrs do
     tex.attribute[underlineattrs[i]] = saved_values[i]
@@ -329,6 +331,7 @@ local function new_underline_type()
   end
   token.put_next(token.new(#underline_types, char_given))
   underline_strict_flag[#underline_types] = strict_flag
+  underline_over_flag[#underline_types] = over_flag
 end
 local function set_underline()
   local j
@@ -491,8 +494,13 @@ function add_underline_h(head, attr)
         local w, st, sh = node.getglue(glue)
         local lead = node.copy(underline_types[last_value])
         node.setglue(lead, -w, -st, -sh, stretch_order, shrink_order)
-        head.head = node.insert_before(head.head, first, lead)
-        node.insert_after(head, lead, glue)
+        if underline_over_flag[last_value] then
+          head.head = node.insert_before(head, n, glue)
+          node.insert_after(head, glue, lead)
+        else
+          head.head = node.insert_before(head.head, first, lead)
+          node.insert_after(head, lead, glue)
+        end
       end
       if new_value then
         first = n
@@ -501,12 +509,17 @@ function add_underline_h(head, attr)
     end
   end
   if last_value then
-    local glue = new_glue_neg_dimensions(first, n, stretch_order, shrink_order)
+  local glue = new_glue_neg_dimensions(first, nil, stretch_order, shrink_order)
     local w, st, sh = node.getglue(glue)
     local lead = node.copy(underline_types[last_value])
     node.setglue(lead, -w, -st, -sh, stretch_order, shrink_order)
-    head.head = node.insert_before(head.head, first, lead)
-    node.insert_after(head, lead, glue)
+    if underline_over_flag[last_value] then
+      node.insert_after(head, node.tail(n), glue)
+      node.insert_after(head, glue, lead)
+    else
+      head.head = node.insert_before(head.head, first, lead)
+      node.insert_after(head, lead, glue)
+    end
   end
   node.set_attribute(head, attr, 0)
 end
