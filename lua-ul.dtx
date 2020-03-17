@@ -418,7 +418,8 @@ local function fil_levels(n)
   end
   return stretch, shrink
 end
-local function new_glue_neg_dimensions(n, t, stretch_order, shrink_order)
+local function new_glue_neg_dimensions(n, t,
+                                       stretch_order, shrink_order)
   local g = node.new(glue_t)
   g.width = -node.dimensions(n, t)
   g.next = n
@@ -487,7 +488,8 @@ function add_underline_h(head, attr)
         stretch_order, shrink_order = fil_levels(head.head)
       end
       if last_value then
-        local glue = new_glue_neg_dimensions(first, n, stretch_order, shrink_order)
+        local glue = new_glue_neg_dimensions(first, n,
+            stretch_order, shrink_order)
         local w, st, sh = node.getglue(glue)
         local lead = node.copy(underline_types[last_value])
         node.setglue(lead, -w, -st, -sh, stretch_order, shrink_order)
@@ -501,7 +503,8 @@ function add_underline_h(head, attr)
     end
   end
   if last_value then
-    local glue = new_glue_neg_dimensions(first, n, stretch_order, shrink_order)
+    local glue = new_glue_neg_dimensions(first, n,
+        stretch_order, shrink_order)
     local w, st, sh = node.getglue(glue)
     local lead = node.copy(underline_types[last_value])
     node.setglue(lead, -w, -st, -sh, stretch_order, shrink_order)
@@ -592,7 +595,8 @@ luatexbase.add_to_callback('pre_append_to_vlist_filter',
 %    \end{macrocode}
 % The main macro.
 %    \begin{macrocode}
-\NewDocumentCommand\newunderlinetype{E{*}{{}}mO{\luaul@defaultcontext}m}{%
+\NewDocumentCommand\newunderlinetype
+    { E{*}{{}} m O{\luaul@defaultcontext} m }{%
   \newcommand#2{}% "Reserve" the name
   \protected\def#2{%
     \expandafter\luaul@maybedefineuse
