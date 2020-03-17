@@ -297,7 +297,7 @@ local char_given = token.command_id'char_given'
 
 local underlineattrs = {}
 local underline_types = {}
-local underline_streight_flag = {}
+local underline_strict_flag = {}
 
 local saved_values = {}
 local function new_underline_type()
@@ -306,7 +306,7 @@ local function new_underline_type()
     saved_values[i] = tex.attribute[attr]
     tex.attribute[attr] = -0x7FFFFFFF
   end
-  local streight_flag = token.scan_keyword'streight'
+  local strict_flag = token.scan_keyword'strict'
   local b = token.scan_list()
   for i=1,#underlineattrs do
     tex.attribute[underlineattrs[i]] = saved_values[i]
@@ -328,7 +328,7 @@ local function new_underline_type()
     node.flush_node(b)
   end
   token.put_next(token.new(#underline_types, char_given))
-  underline_streight_flag[#underline_types] = streight_flag
+  underline_strict_flag[#underline_types] = strict_flag
 end
 local function set_underline()
   local j
@@ -431,6 +431,7 @@ local function new_glue_neg_dimensions(n, t, stretch_order, shrink_order)
 end
 
 %    \end{macrocode}
+% \changes{0.0.3}{2020-03-17}{Make streight lines over hboxes}
 % Now the actual undelining
 %    \begin{macrocode}
 local add_underline_h
@@ -460,16 +461,14 @@ function add_underline_h(head, attr)
       end
     end
     if n.id == hlist_t then
-      if (not underline_streight_flag[new_value]) or n.subtype == 3 then
+      if underline_strict_flag[new_value] or n.subtype == 3 then
         new_value = nil
         add_underline_h(n, attr)
-    end
-    elseif n.id == vlist_t then
-      if not underline_streight_flag[new_value] then
-        new_value = nil
-        add_underline_v(n.head, attr)
-        node.set_attribute(n, attr, 0)
       end
+    elseif n.id == vlist_t then
+      new_value = nil
+      add_underline_v(n.head, attr)
+      node.set_attribute(n, attr, 0)
     elseif n.id == kern_t and n.subtype == 0 then
       if n.next and not node.has_attribute(n.next, attr) then
         new_value = nil
