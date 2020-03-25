@@ -438,44 +438,82 @@ end
 % \changes{0.0.3}{2020-03-17}{Make streight lines over hboxes}
 % Now the actual undelining
 %    \begin{macrocode}
-local add_underline_h
-local function add_underline_v(head, attr)
-  for n in node.traverse(head) do
-    if head.id == hlist_t then
-      add_underline_h(n, attr)
-    elseif head.id == vlist_t then
-      add_underline_v(n.head, attr)
-      node.set_attribute(n, attr, 0)
+local add_underline_hlist, add_underline_hbox, add_underline_vbox
+local function add_underline_vlist(head, attr, outervalue)
+  local iter, state, n = node.traverse_list(head)
+  local t
+  n, t = iter(state, n)
+  while n ~= nil do
+    local real_new_value = node.has_attribute(n, attr)
+    local new_value = real_new_value ~= outervalue and real_new_value or nil
+    if underline_strict_flag[new_value] or not new_value then
+      if t == hlist_t then
+        add_underline_hbox(n, attr, real_new_value)
+      elseif t == vlist_t then
+        add_underline_vbox(n, attr, real_new_value)
+      end
+      n, t = iter(state, n)
+    elseif real_new_value <= 0 then
+      n, t = iter(state, n)
+    else
+      local nn
+      nn, t = iter(state, n)
+      local prev, next = node.getboth(n)
+      node.direct.setboth(node.direct.todirect(n), nil, nil)
+      local shift = n.shift
+      n.shift = 0
+      local new_list = node.hpack(add_underline_hlist(n, attr))
+      new_list.shift = shift
+      node.direct.setlink(node.direct.todirect(prev), node.direct.todirect(new_list), node.direct.todirect(next))
+      node.set_attribute(new_list, attr, 0)
+      if n == head then
+        head = new_list
+      end
+      n = nn
     end
   end
+  return head
 end
-function add_underline_h(head, attr)
+function add_underline_vbox(head, attr, outervalue)
+  if outervalue and outervalue <= 0 then return end
+  head.head = add_underline_vlist(head.head, attr, outervalue)
+  node.set_attribute(head, attr, outervalue and -outervalue or 0)
+end
+function add_underline_hlist(head, attr, outervalue)
   local used = false
-  node.slide(head.head)
+  node.slide(head)
   local last_value
   local first
   local shrink_order, stretch_order
-  for n in node.traverse(head.head) do
-    local new_value = node.has_attribute(n, attr)
-    if new_value then
-      if new_value > 0 then
-        node.set_attribute(n, attr, -new_value)
-      else
-        new_value = nil
+  for n in node.traverse(head) do
+    local real_new_value = node.has_attribute(n, attr)
+    local new_value
+    if real_new_value then
+      if real_new_value > 0 then
+        node.set_attribute(n, attr, -real_new_value)
+        new_value = real_new_value ~= outervalue and real_new_value or nil
       end
+    else
+      node.set_attribute(n, attr, 0)
     end
     if n.id == hlist_t then
-      if underline_strict_flag[new_value] or n.subtype == 3 then
+      if underline_strict_flag[new_value] or n.subtype == 3 or not new_value then
+        add_underline_hbox(n, attr, real_new_value)
         new_value = nil
-        add_underline_h(n, attr)
       end
     elseif n.id == vlist_t then
-      new_value = nil
-      add_underline_v(n.head, attr)
-      node.set_attribute(n, attr, 0)
-    elseif n.id == kern_t and n.subtype == 0 then
-      if n.next and not node.has_attribute(n.next, attr) then
+      if underline_strict_flag[new_value] or not new_value then
+        add_underline_vbox(n, attr, real_new_value)
         new_value = nil
+      end
+    elseif n.id == kern_t and n.subtype == 0 then
+      if n.next then
+        local next_value = node.has_attribute(n.next, attr)
+        if next_value == outervalue or not next_value then
+          new_value = nil
+        else
+          new_value = last_value
+        end
       else
         new_value = last_value
       end
@@ -488,7 +526,7 @@ function add_underline_h(head, attr)
     end
     if last_value ~= new_value then
       if not stretch_order then
-        stretch_order, shrink_order = fil_levels(head.head)
+        stretch_order, shrink_order = fil_levels(head)
       end
       if last_value then
         local glue = new_glue_neg_dimensions(first, n,
@@ -497,10 +535,10 @@ function add_underline_h(head, attr)
         local lead = node.copy(underline_types[last_value])
         node.setglue(lead, -w, -st, -sh, stretch_order, shrink_order)
         if underline_over_flag[last_value] then
-          head.head = node.insert_before(head, n, glue)
+          head = node.insert_before(head, n, glue)
           node.insert_after(head, glue, lead)
         else
-          head.head = node.insert_before(head.head, first, lead)
+          head = node.insert_before(head, first, lead)
           node.insert_after(head, lead, glue)
         end
       end
@@ -520,33 +558,63 @@ function add_underline_h(head, attr)
       node.insert_after(head, node.tail(n), glue)
       node.insert_after(head, glue, lead)
     else
-      head.head = node.insert_before(head.head, first, lead)
+      head = node.insert_before(head, first, lead)
       node.insert_after(head, lead, glue)
     end
   end
-  node.set_attribute(head, attr, 0)
+  return head
 end
-local function filter(b, loc, prev, mirror)
-  for i = 1, #underlineattrs do
-    if loc == "alignment" then
-      assert(b.id == hlist_t)
-      for n in node.traverse(b.head) do
-        if n.id == glue_t then
-        elseif n.id == unset_t then
-          add_underline_h(n, underlineattrs[i])
-        else
-          assert(false)
-        end
-      end
-    else
-      add_underline_v(b, underlineattrs[i])
-    end
-  end
-  return true
+function add_underline_hbox(head, attr, outervalue)
+  if outervalue and outervalue <= 0 then return end
+  head.head = add_underline_hlist(head.head, attr, outervalue)
+  node.set_attribute(head, attr, outervalue and -outervalue or 0)
 end
 require'pre_append_to_vlist_filter'
 luatexbase.add_to_callback('pre_append_to_vlist_filter',
-                           filter, 'add underlines to list')
+    function(b, loc, prev, mirror)
+      if loc == "post_linebreak" then
+        for i = 1, #underlineattrs do
+          add_underline_hbox(b, underlineattrs[i])
+        end
+      else
+        for i = 1, #underlineattrs do
+          local current = tex.attribute[underlineattrs[i]]
+          local b_attr = node.has_attribute(b, underlineattrs[i])
+          if b_attr and b_attr ~= current then
+            b = node.hpack(add_underline_hlist(n, attr))
+            node.set_attribute(b, attr, 0)
+          end
+        end
+      end
+      return b
+    end, 'add underlines to list')
+luatexbase.add_to_callback('hpack_filter',
+    function(head, group, size, pack, dir, attr)
+      for i = 1, #underlineattrs do
+        local current
+        for n in node.traverse(attr) do
+          if n.number == underlineattrs[i] then
+            current = n.value
+          end
+        end
+        add_underline_hlist(head, underlineattrs[i], current)
+      end
+      return head
+    end, 'add underlines to list')
+luatexbase.add_to_callback('vpack_filter',
+    function(head, group, size, pack, maxdepth, dir, attr)
+%      if true then return head end
+      for i = 1, #underlineattrs do
+        local current
+        for n in node.traverse(attr) do
+          if n.number == underlineattrs[i] then
+            current = n.value
+          end
+        end
+        add_underline_vlist(head, underlineattrs[i], current)
+      end
+      return head
+    end, 'add underlines to list')
 %    \end{macrocode}
 % \iffalse
 %</luacode>
