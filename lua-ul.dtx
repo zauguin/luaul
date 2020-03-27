@@ -168,9 +168,8 @@
 %
 % The final argument contains the actual leader command. You should omit the final glue normally passed to \verb+\leaders+,
 % so e.g.\ write \verb+\leaders\hbox{ . }+ without appending \verb+\hfill+ or \verb+\hskip1pt+ etc.
-% The height and depth of your leaders is ignored to ensure that adding underlines etc. does not change the general text layout.
-% It is your responsibility to ensure that you are not too high or too low and intercept other lines. On the other hand,
-% running dimensions work fine if you use a rule.
+% In most cases, the height and depth of your underlines is passed on to TeX to ensure that a deep underline does not interept other lines.
+% On the other hand, running dimensions work fine if you use a rule.
 %
 % For example, the special underline commands demonstrated above are implemented as
 %
@@ -302,6 +301,10 @@ local getfield = node.direct.getfield
 local getglue = node.direct.getglue
 local getleader = node.direct.getleader
 local getlist = node.direct.getlist
+local setheight = node.direct.setheight
+local setdepth = node.direct.setdepth
+local getheight = node.direct.getheight
+local getdepth = node.direct.getdepth
 local getnext = node.direct.getnext
 local getshift = node.direct.getshift
 local insert_after = node.direct.insert_after
@@ -504,7 +507,9 @@ local function add_underline_vlist(head, attr, outervalue)
       setboth(n, nil, nil)
       local shift = getshift(n)
       setshift(n, 0)
-      local new_list = hpack(add_underline_hlist(n, attr))
+      local new_list = hpack((add_underline_hlist(n, attr)))
+      setheight(new_list, getheight(n))
+      setdepth(new_list, getdepth(n))
       setshift(new_list, shift)
       setlink(prev, new_list, next)
       set_attribute(new_list, attr, 0)
@@ -522,7 +527,7 @@ function add_underline_vbox(head, attr, outervalue)
   set_attribute(head, attr, outervalue and -outervalue or 0)
 end
 function add_underline_hlist(head, attr, outervalue)
-  local used = false
+  local max_height, max_depth
   slide(head)
   local last_value
   local first
@@ -589,6 +594,12 @@ function add_underline_hlist(head, attr, outervalue)
       end
       if new_value then
         first = n
+        if not max_height or getheight(underline_types[new_value]) > max_height then
+          max_height = getheight(underline_types[new_value])
+        end
+        if not max_depth or getdepth(underline_types[new_value]) > max_depth then
+          max_depth = getdepth(underline_types[new_value])
+        end
       end
       last_value = new_value
     end
@@ -607,11 +618,20 @@ function add_underline_hlist(head, attr, outervalue)
       insert_after(head, lead, glue)
     end
   end
-  return head
+  return head, max_height, max_depth
 end
-function add_underline_hbox(head, attr, outervalue)
+function add_underline_hbox(head, attr, outervalue, set_height_depth)
   if outervalue and outervalue <= 0 then return end
-  setList(head, add_underline_hlist(getList(head), attr, outervalue))
+  local new_head, new_height, new_depth = add_underline_hlist(getList(head), attr, outervalue)
+  setList(head, new_head)
+  if set_height_depth then
+    if new_height and getheight(head) < new_height then
+      setheight(head, new_height)
+    end
+    if new_depth and getdepth(head) < new_depth then
+      setdepth(head, new_depth)
+    end
+  end
   set_attribute(head, attr, outervalue and -outervalue or 0)
 end
 require'pre_append_to_vlist_filter'
@@ -620,14 +640,14 @@ luatexbase.add_to_callback('pre_append_to_vlist_filter',
       b = todirect(b)
       if loc == "post_linebreak" then
         for i = 1, #underlineattrs do
-          add_underline_hbox(b, underlineattrs[i])
+          add_underline_hbox(b, underlineattrs[i], nil, true)
         end
       else
         for i = 1, #underlineattrs do
           local current = tex.attribute[underlineattrs[i]]
           local b_attr = has_attribute(b, underlineattrs[i])
           if b_attr and b_attr ~= current then
-            b = hpack(add_underline_hlist(n, attr))
+            b = hpack((add_underline_hlist(n, attr)))
             set_attribute(b, attr, 0)
           end
         end
