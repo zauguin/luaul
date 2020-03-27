@@ -312,6 +312,7 @@ local setboth = node.direct.setboth
 local setlink = node.direct.setlink
 local hpack = node.direct.hpack
 local setfield = node.direct.setfield
+local slide = node.direct.slide
 local setglue = node.direct.setglue
 local setnext = node.direct.setnext
 local setshift = node.direct.setshift
@@ -445,7 +446,7 @@ local function fil_levels(n)
     stretch_fi[i], shrink_fi[i] = 0, 0
   end
   for n in traverse_id(glue_t, n) do
-    local w, st, sh, sto, sho = getglue(glue)
+    local w, st, sh, sto, sho = getglue(n)
     stretch_fi[sto] = stretch_fi[sto] + st
     shrink_fi[sho] = shrink_fi[sho] + sh
   end
@@ -465,7 +466,8 @@ local function new_glue_neg_dimensions(n, t,
   local g = nodenew(glue_t)
   setglue(g, -dimensions(n, t), 0, 0, stretch_order, shrink_order)
   setnext(g, n)
-  setglue(g, nil, -dimensions(1, 1, stretch_order, g, t), dimensions(1, 2, shrink_order, g, t), nil, nil)
+  setglue(g, nil, -dimensions(1, 1, stretch_order, g, t),
+                   dimensions(1, 2, shrink_order, g, t), nil, nil)
   setnext(g, nil)
   return g
 end
@@ -481,7 +483,8 @@ local function add_underline_vlist(head, attr, outervalue)
   n, t = iter(state, n)
   while n ~= nil do
     local real_new_value = has_attribute(n, attr)
-    local new_value = real_new_value ~= outervalue and real_new_value or nil
+    local new_value = real_new_value ~= outervalue
+                        and real_new_value or nil
     if underline_strict_flag[new_value] or not new_value then
       if t == hlist_t then
         add_underline_hbox(n, attr, real_new_value)
@@ -517,7 +520,7 @@ function add_underline_vbox(head, attr, outervalue)
 end
 function add_underline_hlist(head, attr, outervalue)
   local used = false
-  node.slide(head)
+  slide(head)
   local last_value
   local first
   local shrink_order, stretch_order
@@ -527,13 +530,15 @@ function add_underline_hlist(head, attr, outervalue)
     if real_new_value then
       if real_new_value > 0 then
         set_attribute(n, attr, -real_new_value)
-        new_value = real_new_value ~= outervalue and real_new_value or nil
+        new_value = real_new_value ~= outervalue
+                      and real_new_value or nil
       end
     else
       set_attribute(n, attr, 0)
     end
     if id == hlist_t then
-      if underline_strict_flag[new_value] or subtype == 3 or not new_value then
+      if underline_strict_flag[new_value]
+          or subtype == 3 or not new_value then
         add_underline_hbox(n, attr, real_new_value)
         new_value = nil
       end
@@ -569,7 +574,7 @@ function add_underline_hlist(head, attr, outervalue)
         local glue = new_glue_neg_dimensions(first, n,
             stretch_order, shrink_order)
         local w, st, sh = getglue(glue)
-        local lead = copy(underline_types[last_value])
+        local lead = nodecopy(underline_types[last_value])
         setglue(lead, -w, -st, -sh, stretch_order, shrink_order)
         if underline_over_flag[last_value] then
           head = insert_before(head, n, glue)
@@ -589,7 +594,7 @@ function add_underline_hlist(head, attr, outervalue)
     local glue = new_glue_neg_dimensions(first, nil,
         stretch_order, shrink_order)
     local w, st, sh = getglue(glue)
-    local lead = copy(underline_types[last_value])
+    local lead = nodecopy(underline_types[last_value])
     setglue(lead, -w, -st, -sh, stretch_order, shrink_order)
     if underline_over_flag[last_value] then
       insert_before(head, nil, glue)
