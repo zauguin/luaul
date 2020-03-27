@@ -464,10 +464,13 @@ end
 local function new_glue_neg_dimensions(n, t,
                                        stretch_order, shrink_order)
   local g = nodenew(glue_t)
-  setglue(g, -dimensions(n, t), 0, 0, stretch_order, shrink_order)
+  local w = -dimensions(n, t)
+  setglue(g, w)
+%  setglue(g, -dimensions(n, t), 0, 0, stretch_order, shrink_order)
   setnext(g, n)
-  setglue(g, nil, -dimensions(1, 1, stretch_order, g, t),
-                   dimensions(1, 2, shrink_order, g, t), nil, nil)
+  setglue(g, w, -dimensions(1, 1, stretch_order, g, t),
+                   dimensions(1, 2, shrink_order, g, t),
+                   stretch_order, shrink_order)
   setnext(g, nil)
   return g
 end
