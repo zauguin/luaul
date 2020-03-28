@@ -594,11 +594,11 @@ function add_underline_hlist(head, attr, outervalue)
       end
       if new_value then
         first = n
-        if not max_height or getheight(underline_types[new_value]) > max_height then
-          max_height = getheight(underline_types[new_value])
+        if not max_height or getheight(getleader(underline_types[new_value])) > max_height then
+        max_height = getheight(getleader(underline_types[new_value]))
         end
-        if not max_depth or getdepth(underline_types[new_value]) > max_depth then
-          max_depth = getdepth(underline_types[new_value])
+        if not max_depth or getdepth(getleader(underline_types[new_value])) > max_depth then
+          max_depth = getdepth(getleader(underline_types[new_value]))
         end
       end
       last_value = new_value
