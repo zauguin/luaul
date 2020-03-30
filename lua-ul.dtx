@@ -258,7 +258,7 @@ local function filtered_append_to_vlist_filter(box,
     current = box
   end
   return call_callback("append_to_vlist_filter",
-                       box, locationcode, prevdepth, mirrored)
+                       current, locationcode, prevdepth, mirrored)
 end
 
 callback_define('append_to_vlist_filter',
@@ -291,6 +291,8 @@ local hlist_t = node.id'hlist'
 local vlist_t = node.id'vlist'
 local kern_t = node.id'kern'
 local glue_t = node.id'glue'
+
+local properties = node.direct.get_properties_table()
 
 local has_attribute = node.direct.has_attribute
 local set_attribute = node.direct.set_attribute
@@ -343,6 +345,16 @@ local underline_types = {}
 local underline_strict_flag = {}
 local underline_over_flag = {}
 
+local vmode do
+  for k, v in pairs(tex.getmodevalues()) do
+  if v == "vertical" then
+      vmode = k
+      break
+    end
+  end
+end
+local texnest = tex.nest
+
 local saved_values = {}
 local function new_underline_type()
   for i=1,#underlineattrs do
@@ -379,7 +391,24 @@ local function new_underline_type()
   underline_over_flag[#underline_types] = over_flag
 end
 local function set_underline()
-  local j
+  local props
+  for i=texnest.ptr,0,-1 do
+    local mode = texnest[i].mode
+    if mode == vmode or mode == -vmode then
+      local head = todirect(texnest[i].head)
+      local head_props = properties[head]
+      if not head_props then
+        head_props = {}
+        properties[head] = head_props
+      end
+      props = head_props.luaul_attributes
+      if not props then
+        props = {}
+        head_props.luaul_attributes = props
+        break
+      end
+    end
+  end
   for i=1,#underlineattrs do
     local attr = underlineattrs[i]
     if tex.attribute[attr] == -0x7FFFFFFF then
@@ -392,6 +421,7 @@ local function set_underline()
         "luaul" .. tostring(#underlineattrs+1))
     underlineattrs[#underlineattrs+1] = j
   end
+  props[j] = props[j] or -0x7FFFFFFF
   tex.attribute[j] = scan_int()
 end
 %    \end{macrocode}
@@ -637,17 +667,25 @@ end
 require'pre_append_to_vlist_filter'
 luatexbase.add_to_callback('pre_append_to_vlist_filter',
     function(b, loc, prev, mirror)
+      local props = properties[todirect(texnest.top.head)]
+      props = props and props.luaul_attributes
       b = todirect(b)
       if loc == "post_linebreak" then
         for i = 1, #underlineattrs do
-          add_underline_hbox(b, underlineattrs[i], nil, true)
+          local attr = underlineattrs[i]
+          local current = props and props[attr] or tex.attribute[attr]
+          if current == -0x7FFFFFFF then
+            current = nil
+          end
+          add_underline_hbox(b, underlineattrs[i], current, true)
         end
       else
         for i = 1, #underlineattrs do
-          local current = tex.attribute[underlineattrs[i]]
-          local b_attr = has_attribute(b, underlineattrs[i])
+          local attr = underlineattrs[i]
+          local current = props and props[attr] or tex.attribute[attr]
+          local b_attr = has_attribute(b, attr)
           if b_attr and b_attr ~= current then
-            b = hpack((add_underline_hlist(n, attr)))
+            b = hpack((add_underline_hlist(b, attr)))
             set_attribute(b, attr, 0)
           end
         end
@@ -658,13 +696,14 @@ luatexbase.add_to_callback('hpack_filter',
     function(head, group, size, pack, dir, attr)
       head = todirect(head)
       for i = 1, #underlineattrs do
+        local ulattr = underlineattrs[i]
         local current
         for n in node.traverse(attr) do
-          if n.number == underlineattrs[i] then
+          if n.number == ulattr then
             current = n.value
           end
         end
-        head = add_underline_hlist(head, underlineattrs[i], current)
+        head = add_underline_hlist(head, ulattr, current)
       end
       return tonode(head)
     end, 'add underlines to list')
@@ -673,13 +712,14 @@ luatexbase.add_to_callback('vpack_filter',
 %      if true then return head end
       head = todirect(head)
       for i = 1, #underlineattrs do
+        local ulattr = underlineattrs[i]
         local current
         for n in node.traverse(attr) do
-          if n.number == underlineattrs[i] then
+          if n.number == ulattr then
             current = n.value
           end
         end
-        head = add_underline_vlist(head, underlineattrs[i], current)
+        head = add_underline_vlist(head, ulattr, current)
       end
       return tonode(head)
     end, 'add underlines to list')
