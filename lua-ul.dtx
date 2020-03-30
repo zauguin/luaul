@@ -391,7 +391,7 @@ local function new_underline_type()
   underline_over_flag[#underline_types] = over_flag
 end
 local function set_underline()
-  local props
+  local j, props
   for i=texnest.ptr,0,-1 do
     local mode = texnest[i].mode
     if mode == vmode or mode == -vmode then
@@ -685,7 +685,10 @@ luatexbase.add_to_callback('pre_append_to_vlist_filter',
           local current = props and props[attr] or tex.attribute[attr]
           local b_attr = has_attribute(b, attr)
           if b_attr and b_attr ~= current then
+            local shift = getshift(b)
+            setshift(b, 0)
             b = hpack((add_underline_hlist(b, attr)))
+            setshift(b, shift)
             set_attribute(b, attr, 0)
           end
         end
