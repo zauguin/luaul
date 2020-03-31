@@ -390,6 +390,11 @@ local function new_underline_type()
   underline_strict_flag[#underline_types] = strict_flag
   underline_over_flag[#underline_types] = over_flag
 end
+%    \end{macrocode}
+% In \verb+append_to_vlist_filter+ we can not access the list attributes,
+% so we just take the current ones. They might be incorrect if the attribute
+% changes in the vlist, so we record the original value in a property then.
+%    \begin{macrocode}
 local function set_underline()
   local j, props
   for i=texnest.ptr,0,-1 do
@@ -510,6 +515,7 @@ end
 
 %    \end{macrocode}
 % \changes{0.0.3}{2020-03-17}{Make streight lines over hboxes}
+% \changes{0.0.4}{2020-03-31}{Consistently respect height and depth}
 % Now the actual undelining
 %    \begin{macrocode}
 local add_underline_hlist, add_underline_hbox, add_underline_vbox
@@ -624,11 +630,12 @@ function add_underline_hlist(head, attr, outervalue)
       end
       if new_value then
         first = n
-        if not max_height or getheight(getleader(underline_types[new_value])) > max_height then
-        max_height = getheight(getleader(underline_types[new_value]))
+        local box = getleader(underline_types[new_value])
+        if not max_height or getheight(box) > max_height then
+          max_height = getheight(box)
         end
-        if not max_depth or getdepth(getleader(underline_types[new_value])) > max_depth then
-          max_depth = getdepth(getleader(underline_types[new_value]))
+        if not max_depth or getdepth(box) > max_depth then
+          max_depth = getdepth(box)
         end
       end
       last_value = new_value
@@ -652,7 +659,8 @@ function add_underline_hlist(head, attr, outervalue)
 end
 function add_underline_hbox(head, attr, outervalue, set_height_depth)
   if outervalue and outervalue <= 0 then return end
-  local new_head, new_height, new_depth = add_underline_hlist(getList(head), attr, outervalue)
+  local new_head, new_height, new_depth
+      = add_underline_hlist(getList(head), attr, outervalue)
   setList(head, new_head)
   if set_height_depth then
     if new_height and getheight(head) < new_height then
@@ -740,7 +748,7 @@ luatexbase.add_to_callback('vpack_filter',
 \NeedsTeXFormat{LaTeX2e}
 \ProvidesPackage
   {lua-ul}
-  [2020/03/17 v0.0.3 Underlining and related functionality for LuaTeX]
+  [2020/03/31 v0.0.4 Underlining and related functionality for LuaTeX]
 
 % \fi
 % Only \LuaLaTeX{} is supported.
