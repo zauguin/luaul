@@ -335,9 +335,11 @@ local set_lua = token.set_lua
 local scan_keyword = token.scan_keyword
 local scan_list = token.scan_list
 local scan_int = token.scan_int
+local scan_toks = token.scan_toks
 local put_next = token.put_next
 local texerror = tex.error
 
+local functions = lua.get_functions_table()
 local char_given = token.command_id'char_given'
 
 local underlineattrs = {}
@@ -355,6 +357,48 @@ local vmode do
 end
 local texnest = tex.nest
 
+%    \end{macrocode}
+% \changes{0.1.0}{2020-07-13}{Ensure that \texttt{\string\everyhbox} doesn't interfere with hlist scanning}
+% To avoid influence from \texttt{\string\everyhbox} we reset \texttt{\string\everyhbox} to an empty token list directly before scanning.
+% As an added complication, we need to use a name which is guaranteed to be the primitive tokenlist and we
+% might have to restore it before reading the actual argument (There might be a reason why \texttt{\string\everyhbox} was sat after all.
+% Also we have to ensure that braces swallowed by LuaTeX are balanced, otherwise we get hard to trace errors in alignment contexts.
+%    \begin{macrocode}
+local scan_raw_hlist do
+  local create = token.create
+  local lbrace, rbrace = token.new(0x7B, 1), token.new(0x7D, 2)
+  tex.enableprimitives('luaul@', {'everyhbox'})
+  local set_everyhbox do
+    local set_toks1, set_toks2 = {create'immediateassignment',
+                                  create'luaul@everyhbox', lbrace},
+                                 {rbrace, create'relax'}
+    function set_everyhbox(t)
+      token.put_next(set_toks2)
+      token.put_next(t)
+      token.put_next(set_toks1)
+      token.scan_token()
+    end
+  end
+  local func = luatexbase.new_luafunction"luaul.restore_everyhbox"
+  local everyhbox_saved
+  functions[func] = function() set_everyhbox(everyhbox_saved) end
+  local toks = {rbrace, -- Housekeeping, only for balance reasons
+                lbrace, create'the', create'luaul@everyhbox', rbrace,
+                create'hpack', lbrace,
+                  token.new(func, token.command_id'lua_call')}
+  function scan_raw_hlist()
+    assert(token.get_next().command == 1)
+    put_next(toks)
+    token.get_next() -- Scan a corresponding brace to keep TeX's brace tracking happy
+    local saved_toks = scan_toks(false, true)
+    everyhbox_saved = saved_toks
+    set_everyhbox{}
+    local list = scan_list()
+    set_everyhbox(saved_toks)
+    return list
+  end
+end
+
 local saved_values = {}
 local function new_underline_type()
   for i=1,#underlineattrs do
@@ -364,7 +408,7 @@ local function new_underline_type()
   end
   local strict_flag = scan_keyword'strict'
   local over_flag = scan_keyword'over'
-  local b = todirect(scan_list())
+  local b = todirect(scan_raw_hlist())
   for i=1,#underlineattrs do
     tex.attribute[underlineattrs[i]] = saved_values[i]
   end
@@ -457,7 +501,6 @@ local function reset_underline()
   end
   tex.attribute[j] = -0x7FFFFFFF
 end
-local functions = lua.get_functions_table()
 local new_underline_type_func =
     luatexbase.new_luafunction"luaul.new_underline_type"
 local set_underline_func =
@@ -748,7 +791,7 @@ luatexbase.add_to_callback('vpack_filter',
 \NeedsTeXFormat{LaTeX2e}
 \ProvidesPackage
   {lua-ul}
-  [2020/03/31 v0.0.4 Underlining and related functionality for LuaTeX]
+  [2020/07/13 v0.1.0 Underlining and related functionality for LuaTeX]
 
 % \fi
 % Only \LuaLaTeX{} is supported.
@@ -762,7 +805,7 @@ luatexbase.add_to_callback('vpack_filter',
 \directlua{require'lua-ul'}
 \RequirePackage{xparse}
 %    \end{macrocode}
-% We support some options. Especially \verb+minimal+ will disable the predefined commands \verb+\underLine+ and \verb+\strikeThrough+ and allow you to define similar commands with your custom settings instead, \verb+soul+ tries to replicate names of the \verb soul  package.
+% We support some options. Especially \verb+minimal+ will disable the predefined commands \verb+\underLine+ and \verb+\strikeThrough+ and allow you to define similar commands with your custom settings instead, \verb+soul+ tries to replicate names of the \verb+soul+ package.
 %    \begin{macrocode}
 \newif\ifluaul@predefined
 \newif\ifluaul@soulnames
@@ -802,7 +845,7 @@ luatexbase.add_to_callback('vpack_filter',
     \expandafter\luaul@maybedefineuse
       \expanded{{\csstring#2@@#3}}%
       {\LuaULSetUnderline
-        \LuaULNewUnderlineType#1\hbox{#4\hskip0pt}%
+        \LuaULNewUnderlineType#1{#4\hskip0pt}%
   }}%
 }
 \ifluaul@predefined
