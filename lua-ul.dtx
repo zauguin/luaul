@@ -818,7 +818,7 @@ luatexbase.add_to_callback('vpack_filter',
   \def\luaul@@setcolor\xcolor@#1#2{}
   \newcommand\luaul@setcolor[1]{%
     \ifx\XC@getcolor\undefined
-      \def\luaul@highlight@currentcolor{#1}
+      \def\luaul@highlight@currentcolor{#1}%
     \else
       \begingroup
         \XC@getcolor{#1}\luaul@tmpcolor
