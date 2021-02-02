@@ -234,7 +234,7 @@ local callback_define
 % so we use the debug library to get the ``real'' \verb+callback.define+:
 %    \begin{macrocode}
 for i=1,5 do
-  local name, func = debug.getupvalue(luatexbase.disable_callback, i)
+local name, func = require'debug'.getupvalue(luatexbase.disable_callback, i)
   if name == 'callback_register' then
     callback_define = func
     break
