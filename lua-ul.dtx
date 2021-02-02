@@ -876,6 +876,7 @@ luatexbase.add_to_callback('vpack_filter',
 \ifluaul@predefined
 %    \end{macrocode}
 % \changes{0.0.2}{2020-03-15}{Allow \texttt{\protect\string\protect\highLight} color customization}
+% \changes{0.1.1}{2022-02-02}{Make color mechanism more generic}
 % For \verb+\highLight+, the color should be customizable.
 % There are two cases: If \verb+xcolor+ is not loaded, we just accept
 % a simple color name. Otherwise, we accept color as documented in
@@ -895,6 +896,13 @@ luatexbase.add_to_callback('vpack_filter',
           \expandafter\luaul@@setcolor\luaul@tmpcolor}}%
     \fi
   }
+  \newcommand\luaul@applycolor{%
+    \ifx\XC@getcolor\undefined
+      \color{\luaul@currentcolor}%
+    \else
+      \expandafter\XC@undeclaredcolor\luaul@currentcolor
+    \fi
+  }
 %    \end{macrocode}
 % Now a user-level command to set the default color.
 %    \begin{macrocode}
@@ -902,27 +910,37 @@ luatexbase.add_to_callback('vpack_filter',
   \edef\luaul@highlight@color{\IfValueTF{#1}{[#1]{#2}}{#2}}%
 }
 %    \end{macrocode}
-% \changes{0.1.1}{2021-02-02}{Use \texttt{xparse} for all user commands}
+% \changes{0.1.1}{2020-03-15}{Use \texttt{xparse} for all user commands}
+% \changes{0.1.1}{2021-02-02}{Optionally color \texttt{\protect\string\protect\strikeThrough}}
 % The sizes for the predefined commands are stolen from the \enquote{soul}
 % default values.
 %    \begin{macrocode}
-  \newunderlinetype\@underLine%
-    {\leaders\vrule height -.65ex depth .75ex}
+  \newunderlinetype\@underLine{%
+    \leaders\vrule height -.65ex depth .75ex
+  }
   \NewDocumentCommand\underLine{m}{{\@underLine#1}}
-  \newunderlinetype\@strikeThrough%
-    {\leaders\vrule height .55ex depth -.45ex}
-  \NewDocumentCommand\strikeThrough{m}{{\@strikeThrough#1}}
+
+  \newunderlinetype\@strikeThrough{%
+    \leaders\vrule height .55ex depth -.45ex
+  }
+  \newunderlinetype\colored@strikeThrough[\number\dimexpr1ex@%
+                                          \luaul@currentcolor]{%
+    \luaul@applycolor
+    \leaders\vrule height .55ex depth -.45ex
+  }
+  \NewDocumentCommand\strikeThrough{om}{{%
+    \IfValueTF{#1}{%
+      \luaul@setcolor{#1}%
+      \colored@strikeThrough
+    }\@strikeThrough%
+    #2%
+  }}
 
   \newunderlinetype\@highLight[\number\dimexpr1ex@%
-                               \luaul@currentcolor]%
-    {%
-      \ifx\XC@getcolor\undefined
-        \color{\luaul@highlight@currentcolor}%
-      \else
-        \expandafter\XC@undeclaredcolor\luaul@highlight@currentcolor
-      \fi
-      \leaders\vrule height 1.75ex depth .75ex
-    }
+                               \luaul@currentcolor]{%
+    \luaul@applycolor
+    \leaders\vrule height 1.75ex depth .75ex
+  }
   \NewDocumentCommand\highLight{O{\luaul@highlight@color}m}{{%
     \luaul@setcolor{#1}%
     \@highLight#2%
