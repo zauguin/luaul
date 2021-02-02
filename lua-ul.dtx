@@ -62,7 +62,7 @@
 %     \duck
 %   \end{tikzpicture}§
 % }}
-% \newcommand\underDuck[1]{{\beginUnderDuck#1}}
+% \NewDocumentCommand\underDuck{m}{{\beginUnderDuck#1}}
 % \newunderlinetype\beginUnderWavy[\number\dimexpr1ex]{\cleaders\hbox{§
 %     \setlength\unitlength{.3ex}§
 %     \begin{picture}(4,0)(0,1)
@@ -72,11 +72,11 @@
 %       \qbezier(2,0)(3,-1)(4,0)
 %     \end{picture}§
 % }}
-% \newcommand\underWavy[1]{{\beginUnderWavy#1}}
+% \NewDocumentCommand\underWavy{m}{{\beginUnderWavy#1}}
 % \newunderlinetype\beginStrikeThough{\leaders\hbox{§
 %     \normalfont\bfseries/§
 % }}
-% \newcommand\StrikeThough[1]{{\beginStrikeThough#1}}
+% \NewDocumentCommand\StrikeThough{m}{{\beginStrikeThough#1}}
 %
 % \newcommand\Luaul{Lua-UL}
 % \newcommand\luaul{Lua-UL}
@@ -180,7 +180,7 @@
 %     \duck
 %   \end{tikzpicture}%
 % }}
-% \newcommand\underDuck[1]{{\beginUnderDuck#1}}
+% \NewDocumentCommand\underDuck{m}{{\beginUnderDuck#1}}
 % \newunderlinetype\beginUnderWavy[\number\dimexpr1ex]{\cleaders\hbox{%
 %     \setlength\unitlength{.3ex}%
 %     \begin{picture}(4,0)(0,1)
@@ -190,11 +190,11 @@
 %       \qbezier(2,0)(3,-1)(4,0)
 %     \end{picture}%
 % }}
-% \newcommand\underWavy[1]{{\beginUnderWavy#1}}
+% \NewDocumentCommand\underWavy{m}{{\beginUnderWavy#1}}
 % \newunderlinetype\beginStrikeThough{\leaders\hbox{%
 %     \normalfont\bfseries/%
 % }}
-% \newcommand\StrikeThough[1]{{\beginStrikeThough#1}}
+% \NewDocumentCommand\StrikeThough{m}{{\beginStrikeThough#1}}
 % \end{verbatim}
 %
 % Here \verb+\underWavy+ uses a custom context because it doesn't change depending on the current font color.
@@ -902,15 +902,16 @@ luatexbase.add_to_callback('vpack_filter',
   \edef\luaul@highlight@color{\IfValueTF{#1}{[#1]{#2}}{#2}}%
 }
 %    \end{macrocode}
+% \changes{0.1.1}{2021-02-02}{Use \texttt{xparse} for all user commands}
 % The sizes for the predefined commands are stolen from the \enquote{soul}
 % default values.
 %    \begin{macrocode}
   \newunderlinetype\@underLine%
     {\leaders\vrule height -.65ex depth .75ex}
-  \newcommand\underLine[1]{{\@underLine#1}}
+  \NewDocumentCommand\underLine{m}{{\@underLine#1}}
   \newunderlinetype\@strikeThrough%
     {\leaders\vrule height .55ex depth -.45ex}
-  \newcommand\strikeThrough[1]{{\@strikeThrough#1}}
+  \NewDocumentCommand\strikeThrough{m}{{\@strikeThrough#1}}
 
   \newunderlinetype\@highLight[\number\dimexpr1ex@%
                                \luaul@currentcolor]%
@@ -922,7 +923,7 @@ luatexbase.add_to_callback('vpack_filter',
       \fi
       \leaders\vrule height 1.75ex depth .75ex
     }
-  \newcommand\highLight[2][\luaul@highlight@color]{{%
+  \NewDocumentCommand\highLight{O{\luaul@highlight@color}m}{{%
     \luaul@setcolor{#1}%
     \@highLight#2%
   }}
