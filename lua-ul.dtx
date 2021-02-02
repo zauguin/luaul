@@ -160,7 +160,7 @@
 % you will have to define this manually.)
 % The optional argument provides a \enquote{context}: This \enquote{context} has to expand to a string
 % (something that can appear in a csname) which changes if the leaders box should be recalculated.
-% The leader will be chached and reused whenever the context evaluates to the same string.
+% The leader will be cached and reused whenever the context evaluates to the same string.
 % So if your leaders should depend on the fontsize,
 % the expansion of the context should contain the font size. If you leaders contain text in the current font,
 % your context should include \verb+\fontname+. The default context includes the current size of \texttt{1ex}
@@ -168,7 +168,7 @@
 %
 % The final argument contains the actual leader command. You should omit the final glue normally passed to \verb+\leaders+,
 % so e.g.\ write \verb+\leaders\hbox{ . }+ without appending \verb+\hfill+ or \verb+\hskip1pt+ etc.
-% In most cases, the height and depth of your underlines is passed on to TeX to ensure that a deep underline does not interept other lines.
+% In most cases, the height and depth of your underlines is passed on to TeX to ensure that a deep underline does not intercept other lines.
 % On the other hand, running dimensions work fine if you use a rule.
 %
 % For example, the special underline commands demonstrated above are implemented as
@@ -358,7 +358,7 @@ end
 local texnest = tex.nest
 
 %    \end{macrocode}
-% \changes{0.1.0}{2020-07-13}{Ensure that \texttt{\string\everyhbox} doesn't interfere with hlist scanning}
+% \changes{0.1.0}{2020-07-13}{Ensure that \texttt{\protect\string\protect\everyhbox} doesn't interfere with hlist scanning}
 % To avoid influence from \texttt{\string\everyhbox} we reset \texttt{\string\everyhbox} to an empty token list directly before scanning.
 % As an added complication, we need to use a name which is guaranteed to be the primitive tokenlist and we
 % might have to restore it before reading the actual argument (There might be a reason why \texttt{\string\everyhbox} was sat after all.
@@ -559,7 +559,7 @@ end
 %    \end{macrocode}
 % \changes{0.0.3}{2020-03-17}{Make streight lines over hboxes}
 % \changes{0.0.4}{2020-03-31}{Consistently respect height and depth}
-% Now the actual undelining
+% Now the actual underlining
 %    \begin{macrocode}
 local add_underline_hlist, add_underline_hbox, add_underline_vbox
 local function add_underline_vlist(head, attr, outervalue)
