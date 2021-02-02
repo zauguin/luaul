@@ -977,6 +977,22 @@ luatexbase.add_to_callback('vpack_filter',
   }
 \fi
 %    \end{macrocode}
+% \changes{0.1.1}{2021-02-02}{Patch \texttt{\protect\string\protect\output}}
+% In the output routine, the page box is repacked before \verb+\reset@font+ is
+% called, so we have to ensure to reset the attributes before that. This will
+% use some awesome output routine hook as soon as that's in the kernel, until
+% then manual patching it is.
+%
+% At the time I am writing this the remaining code of the package contains
+% exactly ten times \verb+\expandafter+. Interestingly, that's also exactly
+% the number of \verb+\expandafter+s we use here.
+%    \begin{macrocode}
+\output\expandafter\expandafter\expandafter{%
+  \expandafter\expandafter\expandafter\LuaULResetUnderline
+  \expandafter\expandafter\expandafter*%
+  \expandafter\@firstofone\the\output%
+}
+%    \end{macrocode}
 % \iffalse
 %</package>
 % \fi
