@@ -1,4 +1,4 @@
-%% Copyright (C) 2020 by Marcel Krueger
+%% Copyright (C) 2020-2021 by Marcel Krueger
 %%
 %% This file may be distributed and/or modified under the
 %% conditions of the LaTeX Project Public License, either
@@ -13,7 +13,7 @@
 \NeedsTeXFormat{LaTeX2e}
 \ProvidesPackage
   {docstrip-luacode}
-  [2020/03/07 v0.1.0 Directly execute Lua code from DocStrip files]
+  [2021/02/02 v0.1.1 Directly execute Lua code from DocStrip files]
 \expanded{%
   \def\noexpand\docstrip@luacode@argscanner#1\directlua{
   tex.sprint(\the\catcodetable@string, "\string\\end{docstrip-luacode}")
