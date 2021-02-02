@@ -298,6 +298,7 @@ local has_attribute = node.direct.has_attribute
 local set_attribute = node.direct.set_attribute
 local dimensions = node.direct.dimensions
 local flush_node = node.direct.flush_node
+local getattr = node.direct.getattributelist
 local getboth = node.direct.getboth
 local getfield = node.direct.getfield
 local getglue = node.direct.getglue
@@ -318,6 +319,7 @@ local setlink = node.direct.setlink
 local hpack = node.direct.hpack
 local setfield = node.direct.setfield
 local slide = node.direct.slide
+local setattr = node.direct.setattributelist
 local setglue = node.direct.setglue
 local setnext = node.direct.setnext
 local setshift = node.direct.setshift
@@ -658,11 +660,33 @@ function add_underline_hlist(head, attr, outervalue)
         stretch_order, shrink_order = fil_levels(head)
       end
       if last_value then
+%    \end{macrocode}
+% \changes{0.1.1}{2022-02-02}{Set attributes for negative glue node}
+% If the value changed and the old one wasn't \texttt{nil}, then we reached
+% the end of the previous underlined segment and therefore know it's length.
+% Therefore we can finally insert the underline.
+%
+% Currently both the underline and the corresponding negative glue inherit
+% the attributes from when the underline was defined. This makes sure that
+% these nodes get consistent attributes (avoiding e.g. that only one of the
+% nodes being picked up in a later pass and therefore interfering with the
+% underlining) and that these are as much as possible under use control.
+%
+% We can't really predict what the most sensible value for attributes we
+% don't control is, but by using this way any issues should be fixable with
+% by adjusting the context argument.
+%
+% Currently this block gets duplicated  a few lines down for the end of the
+% list. This should get refactored into it's own function, but I have to be
+% careful to handle all the special cases there.
+% 
+%    \begin{macrocode}
         local glue = new_glue_neg_dimensions(first, n,
             stretch_order, shrink_order)
         local w, st, sh = getglue(glue)
         local lead = nodecopy(underline_types[last_value])
         setglue(lead, -w, -st, -sh, stretch_order, shrink_order)
+        setattr(glue, getattr(lead))
         if underline_over_flag[last_value] then
           head = insert_before(head, n, glue)
           insert_after(head, glue, lead)
@@ -690,6 +714,7 @@ function add_underline_hlist(head, attr, outervalue)
     local w, st, sh = getglue(glue)
     local lead = nodecopy(underline_types[last_value])
     setglue(lead, -w, -st, -sh, stretch_order, shrink_order)
+    setattr(glue, getattr(lead))
     if underline_over_flag[last_value] then
       insert_before(head, nil, glue)
       insert_after(head, glue, lead)
