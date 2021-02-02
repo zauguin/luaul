@@ -886,12 +886,12 @@ luatexbase.add_to_callback('vpack_filter',
   \def\luaul@@setcolor\xcolor@#1#2{}
   \newcommand\luaul@setcolor[1]{%
     \ifx\XC@getcolor\undefined
-      \def\luaul@highlight@currentcolor{#1}%
+      \def\luaul@currentcolor{#1}%
     \else
       \begingroup
         \XC@getcolor{#1}\luaul@tmpcolor
       \expanded{\endgroup
-        \def\noexpand\luaul@highlight@currentcolor{%
+        \def\noexpand\luaul@currentcolor{%
           \expandafter\luaul@@setcolor\luaul@tmpcolor}}%
     \fi
   }
@@ -913,7 +913,7 @@ luatexbase.add_to_callback('vpack_filter',
   \newcommand\strikeThrough[1]{{\@strikeThrough#1}}
 
   \newunderlinetype\@highLight[\number\dimexpr1ex@%
-                               \luaul@highlight@currentcolor]%
+                               \luaul@currentcolor]%
     {%
       \ifx\XC@getcolor\undefined
         \color{\luaul@highlight@currentcolor}%
