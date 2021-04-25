@@ -294,6 +294,11 @@ local glue_t = node.id'glue'
 
 local properties = node.direct.get_properties_table()
 
+%    \end{macrocode}
+% \verb+current_attr+ is not \texttt{.direct} since it's used in
+% place of a node callback argument.
+%    \begin{macrocode}
+local current_attr = node.current_attr
 local has_attribute = node.direct.has_attribute
 local set_attribute = node.direct.set_attribute
 local dimensions = node.direct.dimensions
@@ -773,6 +778,16 @@ luatexbase.add_to_callback('pre_append_to_vlist_filter',
     end, 'add underlines to list')
 luatexbase.add_to_callback('hpack_filter',
     function(head, group, size, pack, dir, attr)
+%    \end{macrocode}
+% \changes{0.1.3}{2021-04-25}{Correctly detect attributes in alignments}
+% When \verb+hpack_filter+ is called as part of an alignment, no attributes
+% are passed. It seems like a bug, but we will just substitute with the
+% current attributes. Since the callbacks are called after the group for the
+% cell ended, these should always be right.
+%    \begin{macrocode}
+      if group == 'align_set' or group == 'fin_row' then
+        attr = current_attr()
+      end
       head = todirect(head)
       for i = 1, #underlineattrs do
         local ulattr = underlineattrs[i]
@@ -816,7 +831,7 @@ luatexbase.add_to_callback('vpack_filter',
 \NeedsTeXFormat{LaTeX2e}
 \ProvidesPackage
   {lua-ul}
-  [2021/02/15 v0.1.2 Underlining and related functionality for LuaTeX]
+  [2021/04/25 v0.1.3 Underlining and related functionality for LuaTeX]
 
 % \fi
 % Only \LuaLaTeX{} is supported.
