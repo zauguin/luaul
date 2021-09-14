@@ -1019,9 +1019,9 @@ require'lua-ul-patches-preserve-attr'
 %    \end{macrocode}
 % Now a user-level command to set the default color.
 %    \begin{macrocode}
-\NewDocumentCommand\LuaULSetHighLightColor{om}{%
-  \edef\luaul@highlight@color{\IfValueTF{#1}{[#1]{#2}}{#2}}%
-}
+  \NewDocumentCommand\LuaULSetHighLightColor{om}{%
+    \edef\luaul@highlight@color{\IfValueTF{#1}{[#1]{#2}}{#2}}%
+  }
 %    \end{macrocode}
 % \changes{0.1.1}{2021-02-02}{Use \texttt{xparse} for all user commands}
 % \changes{0.1.1}{2021-02-02}{Optionally color \texttt{\protect\string\protect\strikeThrough}}
@@ -1029,6 +1029,96 @@ require'lua-ul-patches-preserve-attr'
 % The sizes for the predefined commands are stolen from the \enquote{soul}
 % default values.
 %    \begin{macrocode}
+
+  \ExplSyntaxOn
+
+  \dim_new:N \l__luaul_top_dim
+  \dim_new:N \l__luaul_bottom_dim
+  \dim_new:N \l__luaul_height_dim
+  \bool_new:N \l__luaul_top_set_bool
+  \bool_new:N \l__luaul_bottom_set_bool
+  \bool_new:N \l__luaul_height_set_bool
+  \bool_new:N \l__luaul_color_set_bool
+
+  \keys_define:nn {luaul / generic} {
+    top .code:n = {
+      \bool_set_true:N \l__luaul_top_set_bool
+      \dim_set:Nn \l__luaul_top_dim {#1}
+    },
+    bottom .code:n = {
+      \bool_set_true:N \l__luaul_bottom_set_bool
+      \dim_set:Nn \l__luaul_bottom_dim {(#1)*-1}
+    },
+    height .code:n = {
+      \bool_set_true:N \l__luaul_height_set_bool
+      \dim_set:Nn \l__luaul_height_dim {#1}
+    },
+    color .code:n = {
+      \bool_set_true:N \l__luaul_color_set_bool
+      \luaul@setcolor {#1}
+    },
+    textcolor .code:n = {
+      \bool_set_false:N \l__luaul_color_set_bool
+    },
+    textcolor .value_forbidden:n = true,
+  }
+
+  \cs_new:Npn \luaul@parse@generic@keys #1 {
+    \bool_set_false:N \l__luaul_top_set_bool
+    \bool_set_false:N \l__luaul_bottom_set_bool
+    \bool_set_false:N \l__luaul_height_set_bool
+
+    \keys_set:nn {luaul / generic} {#1}
+
+    \bool_if:NTF \l__luaul_bottom_set_bool {
+      \bool_if:NTF \l__luaul_top_set_bool {
+        \bool_if:NTF \l__luaul_height_set_bool {
+          \dim_compare:nNnF { \l__luaul_top_dim + \l__luaul_bottom_dim } = {\l__luaul_height_dim} {
+            \PackageError{lua-ul}{Specified~height~is~inconsistent~with~specified~top~and~bottom}{}
+          }
+        } {
+          \dim_set:Nn \l__luaul_height_dim { \l__luaul_top_dim + \l__luaul_bottom_dim }
+        }
+      } {
+        \dim_set:Nn \l__luaul_top_dim { \l__luaul_height_dim - \l__luaul_bottom_dim }
+      }
+    } {
+      \dim_set:Nn \l__luaul_bottom_dim { \l__luaul_height_dim - \l__luaul_top_dim }
+    }
+  }
+
+  \newunderlinetype \@genericUnderLine [
+    \dim_to_decimal_in_sp:n { \l__luaul_top_dim }
+    @
+    \dim_to_decimal_in_sp:n { \l__luaul_bottom_dim }
+    @
+    \bool_if:NTF \l__luaul_color_set_bool {
+      colored@\luaul@currentcolor
+    } {
+      \unless\ifx\undefined\LuaCol@Attribute
+        \the\LuaCol@Attribute
+      \fi
+    }
+  ] {
+    \bool_if:NT \l__luaul_color_set_bool {
+      \luaul@applycolor
+    }
+    \leaders\vrule height \l__luaul_top_dim depth \l__luaul_bottom_dim
+  }
+
+  \ExplSyntaxOff
+
+  \NewDocumentCommand\genericUnderLine{O{} +m}{{%
+      \luaul@parse@generic@keys{
+        top = -.65ex,
+        bottom = -.75ex,
+      }%
+      \luaul@parse@generic@keys{
+        #1%
+      }%
+      \@genericUnderLine#2%
+    }}
+
   \newunderlinetype\@underLine{%
     \leaders\vrule height -.65ex depth .75ex
   }
