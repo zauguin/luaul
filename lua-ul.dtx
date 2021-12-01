@@ -759,7 +759,7 @@ function add_underline_hlist(head, attr, outervalue)
       end
       if last_value then
 %    \end{macrocode}
-% \changes{0.1.1}{2022-02-02}{Set attributes for negative glue node}
+% \changes{0.1.1}{2021-02-02}{Set attributes for negative glue node}
 % If the value changed and the old one wasn't \texttt{nil}, then we reached
 % the end of the previous underlined segment and therefore know it's length.
 % Therefore we can finally insert the underline.
@@ -929,7 +929,7 @@ require'lua-ul-patches-preserve-attr'
 \NeedsTeXFormat{LaTeX2e}
 \ProvidesPackage
   {lua-ul}
-  [2021/05/12 v0.1.4 Underlining and related functionality for LuaTeX]
+  [2021/12/01 v0.1.5 Underlining and related functionality for LuaTeX]
 
 % \fi
 % Only \LuaLaTeX{} is supported.
@@ -989,7 +989,8 @@ require'lua-ul-patches-preserve-attr'
 \ifluaul@predefined
 %    \end{macrocode}
 % \changes{0.0.2}{2020-03-15}{Allow \texttt{\protect\string\protect\highLight} color customization}
-% \changes{0.1.1}{2022-02-02}{Make color mechanism more generic}
+% \changes{0.1.1}{2021-02-02}{Make color mechanism more generic}
+% \changes{0.1.5}{2021-12-01}{Better error handling if luacolor is not loaded}
 % For \verb+\highLight+, the color should be customizable.
 % There are two cases: If \verb+xcolor+ is not loaded, we just accept
 % a simple color name. Otherwise, we accept color as documented in
@@ -1010,11 +1011,17 @@ require'lua-ul-patches-preserve-attr'
     \fi
   }
   \newcommand\luaul@applycolor{%
-    \ifx\XC@getcolor\undefined
-      \color{\luaul@currentcolor}%
-    \else
-      \expandafter\XC@undeclaredcolor\luaul@currentcolor
-    \fi
+    \IfPackageLoadedTF{luacolor}{%
+      \ifx\XC@getcolor\undefined
+        \color{\luaul@currentcolor}%
+      \else
+        \expandafter\XC@undeclaredcolor\luaul@currentcolor
+      \fi
+    }{%
+      \PackageError{lua-ul}{Color support in lua-ul requires luacolor.}{%
+        This error can be fixed by adding \string\usepackage{luacolor} in your preamble.
+      }
+    }
   }
 %    \end{macrocode}
 % Now a user-level command to set the default color.
