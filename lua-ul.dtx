@@ -965,13 +965,13 @@ require'lua-ul-patches-preserve-attr'
 %
 % Just one more tiny helper.
 %    \begin{macrocode}
-\cs_new_protected:Npn \__luaul_maybe_define_use:cx #1#2 {
-  \cs_if_free:cT {#1} {
-    \cs_gset:cpx {#1} {#2}
+\cs_new_protected:Npn \__luaul_maybe_define_use:Nx #1#2 {
+  \cs_if_free:NT #1 {
+    \cs_gset:Npx #1 {#2}
   }
-  \use:c {#1}
+  #1
 }
-% \cs_generate_variant:Nn \__luaul_maybe_define_use:Nn {cn}
+\cs_generate_variant:Nn \__luaul_maybe_define_use:Nx {c}
 %    \end{macrocode}
 % The default for the context argument. Give that most stuff should
 % scale vertically with the font size, we expect most arguments
@@ -979,7 +979,7 @@ require'lua-ul-patches-preserve-attr'
 % underlines will use the currently active text color, so especially
 % when luacolor is loaded we have to include the color attribute too.
 %    \begin{macrocode}
-\cs_new:Npn \luaul@defaultcontext {
+\cs_new:Npn \__luaul_default_context: {
   \dim_to_decimal_in_sp:n {1ex}
   @
   \cs_if_exist:NT \LuaCol@Attribute {
@@ -990,9 +990,9 @@ require'lua-ul-patches-preserve-attr'
 % The main macro.
 %    \begin{macrocode}
 \NewDocumentCommand \newunderlinetype
-    { E{*}{{}} m O{\luaul@defaultcontext} m } {
+    { E{*}{{}} m O{\__luaul_default_context:} m } {
   \cs_new_protected:Npn #2 {
-    \exp_args:Ne \__luaul_maybe_define_use:cx {
+    \__luaul_maybe_define_use:cx {
       __luaul_set_underline_ \cs_to_str:N #2 _ #3 :
     } {
       \LuaULSetUnderline
@@ -1003,6 +1003,14 @@ require'lua-ul-patches-preserve-attr'
 
 \bool_if:NT \l__luaul_predefined_bool {
   \msg_new:nnnn {lua-ul} {height-inconsistent} {Specified~height~is~inconsistent~with~specified~top~and~bottom}{}
+  \msg_new:nnnn {lua-ul} {deprecated} {Used~deprecated~command~`\token_to_str:N #1'.~Please~replace~this~with~`\token_to_str:N #2`.}{}
+  \cs_new:Npn \__luaul_deprecated:NN #1#2 {
+    \cs_new_protected:Npn #1 {
+      \msg_warning:nnnn {lua-ul} {deprecated} {#1} {#2}
+      \cs_gset_eq:NN #1 #2
+      #1
+    }
+  }
 %    \end{macrocode}
 %
 % \changes{0.0.2}{2020-03-15}{Allow \texttt{\protect\string\protect\highLight} color customization}
@@ -1014,35 +1022,55 @@ require'lua-ul-patches-preserve-attr'
 % xcolor for PSTricks: Either a color name, a color expression or a
 % combination of colormodel and associated values.
 %    \begin{macrocode}
-  \newcommand\luaul@highlight@color{yellow}
-  \def\luaul@@setcolor\xcolor@#1#2{}
-  \newcommand\luaul@setcolor[1]{%
-    \ifx\XC@getcolor\undefined
-      \def\luaul@currentcolor{#1}%
-    \else
-      \begingroup
-        \XC@getcolor{#1}\luaul@tmpcolor
-      \expanded{\endgroup
-        \def\noexpand\luaul@currentcolor{%
-          \expandafter\luaul@@setcolor\luaul@tmpcolor}}%
-    \fi
+  \tl_new:N \l__luaul_current_color_tl
+  \cs_new:Npn \__luaul_set_color_strip:w \xcolor@ #1#2 {}
+  \cs_new_protected:Npn \luaul_set_color:n #1 {
+    \cs_if_free:NTF \XC@getcolor {
+      \tl_set:Nn \l__luaul_current_color_tl {#1}
+    } {
+      \group_begin:
+        \XC@getcolor {#1} \l_tmpa_tl
+      \use:e { \group_end:
+        \tl_set:Nn \exp_not:N \l__luaul_current_color_tl {
+          \exp_after:wN \__luaul_set_color_strip:w \l_tmpa_tl
+        }
+      }
+    }
   }
-  \newcommand\luaul@applycolor{%
-    \IfPackageLoadedTF{luacolor}{%
-      \ifx\XC@getcolor\undefined
-        \color{\luaul@currentcolor}%
-      \else
-        \expandafter\XC@undeclaredcolor\luaul@currentcolor
-      \fi
-    }{%
+  \__luaul_deprecated:NN \luaul@setcolor \luaul_set_color:n
+  \cs_new_protected:Npn \luaul_apply_color: {
+    \IfPackageLoadedTF {luacolor} {
+      \cs_if_free:NTF \XC@getcolor {
+        \color {\l__luaul_current_color_tl}
+      }{
+        \exp_after:wN \XC@undeclaredcolor \l__luaul_current_color_tl
+      }
+    }{
       \msg_error:nn {lua-ul} {luacolor-required}
     }
   }
+  \__luaul_deprecated:NN \luaul@applycolor \luaul_apply_color:
+  \cs_new:Npn \luaul_context_color: {
+    \l__luaul_current_color_tl
+  }
+  \cs_new:Npn \__luaul_default_colored_context: {
+    \dim_to_decimal_in_sp:n {1ex}
+    @
+    \luaul_context_color:
+  }
 %    \end{macrocode}
-% Now a user-level command to set the default color.
+% Now a user-level command to set the default color for highlights.
 %    \begin{macrocode}
-  \NewDocumentCommand\LuaULSetHighLightColor{om}{%
-    \edef\luaul@highlight@color{\IfValueTF{#1}{[#1]{#2}}{#2}}%
+  \tl_new:N \l__luaul_highlight_color_tl
+  \tl_set:Nn \l__luaul_highlight_color_tl {yellow}
+  \NewDocumentCommand \LuaULSetHighLightColor {om} {
+    \tl_set:Nx \l__luaul_highlight_color_tl {
+      \IfValueTF {#1} {
+        [#1]{#2}
+      }{
+        #2
+      }
+    }
   }
 %    \end{macrocode}
 % \changes{0.1.1}{2021-02-02}{Use \texttt{xparse} for all user commands}
@@ -1075,7 +1103,7 @@ require'lua-ul-patches-preserve-attr'
     },
     color .code:n = {
       \bool_set_true:N \l__luaul_color_set_bool
-      \luaul@setcolor {#1}
+      \luaul_set_color:n {#1}
     },
     textcolor .code:n = {
       \bool_set_false:N \l__luaul_color_set_bool
@@ -1083,7 +1111,7 @@ require'lua-ul-patches-preserve-attr'
     textcolor .value_forbidden:n = true,
   }
 
-  \cs_new:Npn \luaul@parse@generic@keys #1 {
+  \cs_new:Npn \__luaul_parse_generic_keys:n #1 {
     \bool_set_false:N \l__luaul_top_set_bool
     \bool_set_false:N \l__luaul_bottom_set_bool
     \bool_set_false:N \l__luaul_height_set_bool
@@ -1107,70 +1135,85 @@ require'lua-ul-patches-preserve-attr'
     }
   }
 
-  \newunderlinetype \@genericUnderLine [
+  \newunderlinetype \@@underLine [
     \dim_to_decimal_in_sp:n { \l__luaul_top_dim }
     @
     \dim_to_decimal_in_sp:n { \l__luaul_bottom_dim }
     @
     \bool_if:NTF \l__luaul_color_set_bool {
-      colored@\luaul@currentcolor
+      colored @ \luaul_context_color:
     } {
-      \unless\ifx\undefined\LuaCol@Attribute
-        \the\LuaCol@Attribute
-      \fi
+      \cs_if_exist:NT \LuaCol@Attribute {
+        \int_use:N \LuaCol@Attribute
+      }
     }
   ] {
     \bool_if:NT \l__luaul_color_set_bool {
-      \luaul@applycolor
+      \luaul_apply_color:
     }
     \leaders\vrule height \l__luaul_top_dim depth \l__luaul_bottom_dim
   }
+  \newunderlinetype \@basicUnderLine {
+    \leaders \vrule height -.65ex depth .75ex
+  }
 
-  \NewDocumentCommand\genericUnderLine{O{} +m}{{%
-      \luaul@parse@generic@keys{
+  \NewDocumentCommand \@underLine {o} {
+    \IfValueTF {#1} {
+      \__luaul_parse_generic_keys:n {
         top = -.65ex,
         bottom = -.75ex,
-      }%
-      \luaul@parse@generic@keys{
-        #1%
-      }%
-      \@genericUnderLine#2%
-    }}
-
-  \newunderlinetype\@underLine{%
-    \leaders\vrule height -.65ex depth .75ex
+      }
+      \__luaul_parse_generic_keys:n {
+        #1
+      }
+      \@@underLine
+    } {
+      \@basicUnderLine
+    }
   }
-  \NewDocumentCommand\underLine{+m}{{\@underLine#1}}
+  \NewDocumentCommand \underLine {o +m} {
+    \group_begin:
+    \@underLine [#1] #2
+    \group_end:
+  }
 
-  \newunderlinetype\@strikeThrough{%
+  \newunderlinetype \@@strikeThrough {
+    \leaders \vrule height .55ex depth -.45ex
+  }
+  \newunderlinetype \@colored@strikeThrough [\__luaul_default_colored_context:] {
+    \luaul_apply_color:
     \leaders\vrule height .55ex depth -.45ex
   }
-  \newunderlinetype\colored@strikeThrough[\number\dimexpr1ex@%
-                                          \luaul@currentcolor]{%
-    \luaul@applycolor
-    \leaders\vrule height .55ex depth -.45ex
+  \NewDocumentCommand \@strikeThrough {o} {
+    \IfValueTF {#1} {
+      \luaul_set_color:n {#1}
+      \@colored@strikeThrough
+    }
+    \@@strikeThrough
   }
-  \NewDocumentCommand\strikeThrough{o+m}{{%
-    \IfValueTF{#1}{%
-      \luaul@setcolor{#1}%
-      \colored@strikeThrough
-    }\@strikeThrough%
-    #2%
-  }}
+  \NewDocumentCommand \strikeThrough {o +m} {
+    \group_begin:
+    \@strikeThrough #2
+    \group_end:
+  }
 
-  \newunderlinetype\@highLight[\number\dimexpr1ex@%
-                               \luaul@currentcolor]{%
-    \luaul@applycolor
+  \newunderlinetype \@@highLight [\__luaul_default_colored_context:] {
+    \luaul_apply_color:
     \leaders\vrule height 1.75ex depth .75ex
   }
-  \NewDocumentCommand\highLight{O{\luaul@highlight@color}+m}{{%
-    \luaul@setcolor{#1}%
-    \@highLight#2%
-  }}
+  \NewDocumentCommand \@highLight {O{\l__luaul_highlight_color_tl}} {
+    \luaul_set_color:n {#1}
+    \@@highLight
+  }
+  \NewDocumentCommand \highLight {O{\l__luaul_highlight_color_tl} +m} {
+    \group_begin:
+    \@highLight [#1] #2
+    \group_end:
+  }
   \bool_if:NT \l__luaul_soulnames_bool {
-    \let\textul\underLine \let\ul\textul
-    \let\textst\strikeThrough \let\st\textst
-    \let\texthl\highLight \let\hl\texthl
+    \cs_new_eq:NN \textul \underLine     \cs_new_eq:NN \ul \textul
+    \cs_new_eq:NN \textst \strikeThrough \cs_new_eq:NN \st \textst
+    \cs_new_eq:NN \texthl \highLight     \cs_new_eq:NN \hl \texthl
   }
 }
 %    \end{macrocode}
