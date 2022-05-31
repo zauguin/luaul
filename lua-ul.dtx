@@ -42,8 +42,8 @@
 %</gobble>
 %<*driver>
 \documentclass{article}
-\usepackage{lua-ul}
-\usepackage{csquotes,doc,framed,metalogo,hyperref,luacolor,tikzducks,pict2e}
+\usepackage{luacolor,lua-ul}
+\usepackage{csquotes,doc,framed,metalogo,tikzducks,pict2e,hyperref}
 \RecordChanges
 \begin{document}
 \DocInput{lua-ul.dtx}
@@ -143,6 +143,17 @@
 %   \LuaULSetHighLightColor{yellow}
 %   Let's go back to traditional \highLight{highlighting}.
 % \end{framed}
+%
+% The \verb+\underLine+ allows an optional argument accepting keyval options to customize the underline.
+% Currently four keys are implemented:
+%
+% \begin{description}
+% \item[textcolor] Active by default. The underline is colored in the current text color.
+% \item[color] Allows setting the color of the underline according to the syntax the xcolor manual
+% documents for PSTricks.
+% \item[top/bottom/height] At most two of these three options should be set. Specifies the height of the upper/lower
+% edge of the underline or the linewidth.
+% \end{description}
 %
 % \section{Expert interface}
 % \DescribeMacro{\newunderlinetype}§
@@ -923,6 +934,7 @@ require'lua-ul-patches-preserve-attr'
 %</gobble>
 % \fi
 % \subsection{\TeX\ support package}
+% \changes{0.2.0}{2022-05-30}{Move to expl3}
 % Now only some \LaTeX\ glue code is still needed
 % \iffalse
 %<*package>
@@ -1076,6 +1088,7 @@ require'lua-ul-patches-preserve-attr'
 % \changes{0.1.1}{2021-02-02}{Use \texttt{xparse} for all user commands}
 % \changes{0.1.1}{2021-02-02}{Optionally color \texttt{\protect\string\protect\strikeThrough}}
 % \changes{0.1.2}{2021-02-15}{Allow \texttt{long} arguments (again)}
+% \changes{0.2.0}{2022-05-30}{Add keyval for \underLine}
 % The sizes for the predefined commands are stolen from the \enquote{soul}
 % default values.
 %    \begin{macrocode}
