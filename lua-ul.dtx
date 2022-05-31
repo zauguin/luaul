@@ -940,7 +940,7 @@ require'lua-ul-patches-preserve-attr'
 \msg_new:nnnn {lua-ul} {luacolor-required} {
   Color~support~in~lua-ul~requires~luacolor.
 }{
-  This~error~can~be~fixed~by~adding~\cs_to_str:N \usepackage{luacolor}~in~your~preamble.
+  This~error~can~be~fixed~by~adding~\token_to_str:N \usepackage{luacolor}~in~your~preamble.
 }
 %    \end{macrocode}
 %
@@ -965,12 +965,13 @@ require'lua-ul-patches-preserve-attr'
 %
 % Just one more tiny helper.
 %    \begin{macrocode}
-\protected\def\luaul@maybedefineuse#1#2{%
-  \unless\ifcsname#1\endcsname
-    \expandafter\xdef\csname#1\endcsname{#2}%
-  \fi
-  \csname#1\endcsname
+\cs_new_protected:Npn \__luaul_maybe_define_use:cx #1#2 {
+  \cs_if_free:cT {#1} {
+    \cs_gset:cpx {#1} {#2}
+  }
+  \use:c {#1}
 }
+% \cs_generate_variant:Nn \__luaul_maybe_define_use:Nn {cn}
 %    \end{macrocode}
 % The default for the context argument. Give that most stuff should
 % scale vertically with the font size, we expect most arguments
@@ -978,29 +979,32 @@ require'lua-ul-patches-preserve-attr'
 % underlines will use the currently active text color, so especially
 % when luacolor is loaded we have to include the color attribute too.
 %    \begin{macrocode}
-  \newcommand\luaul@defaultcontext{%
-    \number\dimexpr1ex
-    @
-    \unless\ifx\undefined\LuaCol@Attribute
-      \the\LuaCol@Attribute
-    \fi
+\cs_new:Npn \luaul@defaultcontext {
+  \dim_to_decimal_in_sp:n {1ex}
+  @
+  \cs_if_exist:NT \LuaCol@Attribute {
+    \int_use:N \LuaCol@Attribute
   }
+}
 %    \end{macrocode}
 % The main macro.
 %    \begin{macrocode}
-\NewDocumentCommand\newunderlinetype
-    { E{*}{{}} m O{\luaul@defaultcontext} m }{%
-  \newcommand#2{}% "Reserve" the name
-  \protected\def#2{%
-    \expandafter\luaul@maybedefineuse
-      \expanded{{\csstring#2@@#3}}%
-      {\LuaULSetUnderline
-        \LuaULNewUnderlineType#1{#4\hskip0pt}%
-  }}%
+\NewDocumentCommand \newunderlinetype
+    { E{*}{{}} m O{\luaul@defaultcontext} m } {
+  \cs_new_protected:Npn #2 {
+    \exp_args:Ne \__luaul_maybe_define_use:cx {
+      __luaul_set_underline_ \cs_to_str:N #2 _ #3 :
+    } {
+      \LuaULSetUnderline
+        \LuaULNewUnderlineType #1 { #4 \hskip 0pt }
+    }
+  }
 }
+
 \bool_if:NT \l__luaul_predefined_bool {
   \msg_new:nnnn {lua-ul} {height-inconsistent} {Specified~height~is~inconsistent~with~specified~top~and~bottom}{}
 %    \end{macrocode}
+%
 % \changes{0.0.2}{2020-03-15}{Allow \texttt{\protect\string\protect\highLight} color customization}
 % \changes{0.1.1}{2021-02-02}{Make color mechanism more generic}
 % \changes{0.1.5}{2021-12-01}{Better error handling if luacolor is not loaded}
