@@ -927,31 +927,42 @@ require'lua-ul-patches-preserve-attr'
 % \iffalse
 %<*package>
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesPackage
+\ProvidesExplPackage
   {lua-ul}
-  [2021/12/01 v0.1.5 Underlining and related functionality for LuaTeX]
-
+  {2022-05-30}{v0.2.0}{Underlining and related functionality for LuaTeX}
 % \fi
+% First define some messages.
+%    \begin{macrocode}
+\msg_new:nnnn {lua-ul} {luatex-required} {LuaLaTeX~required} {
+  Lua-UL~requires~LuaLaTeX.~
+  Maybe~you~forgot~to~switch~the~engine~in~your~editor?
+}
+\msg_new:nnnn {lua-ul} {luacolor-required} {
+  Color~support~in~lua-ul~requires~luacolor.
+}{
+  This~error~can~be~fixed~by~adding~\cs_to_str:N \usepackage{luacolor}~in~your~preamble.
+}
+%    \end{macrocode}
+%
 % Only \LuaLaTeX{} is supported.
 % For other engines we show an error.
 %    \begin{macrocode}
-\ifx\directlua\undefined
-  \PackageError{lua-ul}{LuaLaTeX required}%
-  {Lua-UL requires LuaLaTeX.
-   Maybe you forgot to switch the engine in your editor?}
-\fi
-\directlua{require'lua-ul'}
-\RequirePackage{xparse}
+\sys_if_engine_luatex:F {
+  \msg_error:nn {lua-ul} {luatex-required}
+}
+\lua_load_module:n {lua-ul}
+%
 %    \end{macrocode}
 % We support some options. Especially \verb+minimal+ will disable the predefined commands \verb+\underLine+ and \verb+\strikeThrough+ and allow you to define similar commands with your custom settings instead, \verb+soul+ tries to replicate names of the \verb+soul+ package.
 %    \begin{macrocode}
-\newif\ifluaul@predefined
-\newif\ifluaul@soulnames
-\luaul@predefinedtrue
-\DeclareOption{minimal}{\luaul@predefinedfalse}
-\DeclareOption{soul}{\luaul@soulnamestrue}
+\bool_new:N \l__luaul_predefined_bool
+\bool_new:N \l__luaul_soulnames_bool
+\bool_set_true:N \l__luaul_predefined_bool
+\DeclareOption {minimal} { \bool_set_false:N \l__luaul_predefined_bool }
+\DeclareOption {soul} { \bool_set_true:N \l__luaul_soulnames_bool }
 \ProcessOptions\relax
 %    \end{macrocode}
+%
 % Just one more tiny helper.
 %    \begin{macrocode}
 \protected\def\luaul@maybedefineuse#1#2{%
@@ -969,7 +980,8 @@ require'lua-ul-patches-preserve-attr'
 %    \begin{macrocode}
   \newcommand\luaul@defaultcontext{%
     \number\dimexpr1ex
-    @\unless\ifx\undefined\LuaCol@Attribute
+    @
+    \unless\ifx\undefined\LuaCol@Attribute
       \the\LuaCol@Attribute
     \fi
   }
@@ -986,7 +998,8 @@ require'lua-ul-patches-preserve-attr'
         \LuaULNewUnderlineType#1{#4\hskip0pt}%
   }}%
 }
-\ifluaul@predefined
+\bool_if:NT \l__luaul_predefined_bool {
+  \msg_new:nnnn {lua-ul} {height-inconsistent} {Specified~height~is~inconsistent~with~specified~top~and~bottom}{}
 %    \end{macrocode}
 % \changes{0.0.2}{2020-03-15}{Allow \texttt{\protect\string\protect\highLight} color customization}
 % \changes{0.1.1}{2021-02-02}{Make color mechanism more generic}
@@ -1018,9 +1031,7 @@ require'lua-ul-patches-preserve-attr'
         \expandafter\XC@undeclaredcolor\luaul@currentcolor
       \fi
     }{%
-      \PackageError{lua-ul}{Color support in lua-ul requires luacolor.}{%
-        This error can be fixed by adding \string\usepackage{luacolor} in your preamble.
-      }
+      \msg_error:nn {lua-ul} {luacolor-required}
     }
   }
 %    \end{macrocode}
@@ -1036,8 +1047,6 @@ require'lua-ul-patches-preserve-attr'
 % The sizes for the predefined commands are stolen from the \enquote{soul}
 % default values.
 %    \begin{macrocode}
-
-  \ExplSyntaxOn
 
   \dim_new:N \l__luaul_top_dim
   \dim_new:N \l__luaul_bottom_dim
@@ -1081,7 +1090,7 @@ require'lua-ul-patches-preserve-attr'
       \bool_if:NTF \l__luaul_top_set_bool {
         \bool_if:NTF \l__luaul_height_set_bool {
           \dim_compare:nNnF { \l__luaul_top_dim + \l__luaul_bottom_dim } = {\l__luaul_height_dim} {
-            \PackageError{lua-ul}{Specified~height~is~inconsistent~with~specified~top~and~bottom}{}
+            \msg_error:nn {lua-ul} {height-inconsistent}
           }
         } {
           \dim_set:Nn \l__luaul_height_dim { \l__luaul_top_dim + \l__luaul_bottom_dim }
@@ -1112,8 +1121,6 @@ require'lua-ul-patches-preserve-attr'
     }
     \leaders\vrule height \l__luaul_top_dim depth \l__luaul_bottom_dim
   }
-
-  \ExplSyntaxOff
 
   \NewDocumentCommand\genericUnderLine{O{} +m}{{%
       \luaul@parse@generic@keys{
@@ -1156,12 +1163,12 @@ require'lua-ul-patches-preserve-attr'
     \luaul@setcolor{#1}%
     \@highLight#2%
   }}
-  \ifluaul@soulnames
+  \bool_if:NT \l__luaul_soulnames_bool {
     \let\textul\underLine \let\ul\textul
     \let\textst\strikeThrough \let\st\textst
     \let\texthl\highLight \let\hl\texthl
-  \fi
-\fi
+  }
+}
 %    \end{macrocode}
 % \changes{0.0.2}{2020-03-15}{Patch \texttt{\protect\string\protect\reset@font}}
 % Finally patch \verb+\reset@font+ to ensure that underlines do not propagate
