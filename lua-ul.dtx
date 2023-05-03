@@ -1206,7 +1206,7 @@ require'lua-ul-patches-preserve-attr'
   }
   \NewDocumentCommand \strikeThrough {o +m} {
     \group_begin:
-    \@strikeThrough #2
+    \@strikeThrough[#1] #2
     \group_end:
   }
 
