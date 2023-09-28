@@ -118,6 +118,11 @@
 %   \end{document}
 % \end{verbatim}
 %
+% The \texttt{ulem} package option allows you to use a reimplementation 
+% of the commands \verb+\uline+, \verb+\uuline+, \verb+\uwave+, \verb+\sout+
+% and \verb+\xout+ from the ulem package.
+% 
+%
 % The \verb+\highLight+ command highlights the argument in yellow by default. This color can be changed
 % either by providing a color as optional argument or by changing the default through \verb+\LuaULSetHighLightColor+:
 %
@@ -965,13 +970,15 @@ require'lua-ul-patches-preserve-attr'
 \lua_load_module:n {lua-ul}
 %
 %    \end{macrocode}
-% We support some options. Especially \verb+minimal+ will disable the predefined commands \verb+\underLine+ and \verb+\strikeThrough+ and allow you to define similar commands with your custom settings instead, \verb+soul+ tries to replicate names of the \verb+soul+ package.
+% We support some options. Especially \verb+minimal+ will disable the predefined commands \verb+\underLine+, \verb+\strikeThrough+ and \verb+highLight+ and allow you to define similar commands with your custom settings instead, \verb+soul+ tries to replicate names of the \verb+soul+ package \verb+ulem+ tries to replicate commands from the \verb+ulem+ package.
 %    \begin{macrocode}
 \bool_new:N \l__luaul_predefined_bool
 \bool_new:N \l__luaul_soulnames_bool
+\bool_new:N \l__luaul_ulemnames_bool
 \bool_set_true:N \l__luaul_predefined_bool
 \DeclareOption {minimal} { \bool_set_false:N \l__luaul_predefined_bool }
 \DeclareOption {soul} { \bool_set_true:N \l__luaul_soulnames_bool }
+\DeclareOption {ulem} { \bool_set_true:N \l__luaul_ulemnames_bool }
 \ProcessOptions\relax
 %    \end{macrocode}
 %
@@ -1227,6 +1234,27 @@ require'lua-ul-patches-preserve-attr'
     \cs_new_eq:NN \textul \underLine     \cs_new_eq:NN \ul \textul
     \cs_new_eq:NN \textst \strikeThrough \cs_new_eq:NN \st \textst
     \cs_new_eq:NN \texthl \highLight     \cs_new_eq:NN \hl \texthl
+  }
+  \bool_if:NT \l__luaul_ulemnames_bool {
+    \cs_new_eq:NN \uline \underLine     
+    \cs_new_eq:NN \sout \strikeThrough
+    \font \l__luaul_lasy_font = lasy6
+    \newunderlinetype \@uwave { \cleaders \hbox { 
+    	\lower 3.5\p@ \hbox {
+    		\normalfont \l__luaul_lasy_font \char 58
+    }}}
+    \NewDocumentCommand \uwave {+m} {{ \@uwave #1 }}
+    \newunderlinetype \@xout { \cleaders \hbox to .35em {
+        \hss \normalfont/ \hss
+    }}
+    \NewDocumentCommand \xout {+m}{{ \@xout #1 }}
+    \newunderlinetype \@uuline { \leaders \hbox {
+    	\lower 3.5\p@ \hbox {
+        \kern -.03em \vbox {
+        	\hrule width .2em \kern 1\p@ \hrule
+	} \kern -.03em }
+    }}
+    \NewDocumentCommand \uuline {+m} {{ \@uuline #1 }}
   }
 }
 %    \end{macrocode}
