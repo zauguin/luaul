@@ -16,6 +16,13 @@ jobs:
           package_file: .github/tl_packages
       - name: Run l3build
         run: l3build ctan --show-log-on-error -H
+      - name: Validate CTAN package
+        uses: ./.github/actions/ctan-upload
+        with:
+          uploader: Dummy Name
+          email: dryrun@example.com
+          filename: build/distrib/ctan/lua-ul-ctan.zip
+          dry-run: true
       - name: Upload package artifact
         uses: actions/upload-artifact@v4
         with:
@@ -36,10 +43,10 @@ jobs:
         with:
           artifacts: "*.zip"
           token: ${{ secrets.GITHUB_TOKEN }}
-          draft: true
 
-  ctan-validate:
+  ctan-upload:
     runs-on: ubuntu-22.04
+    environment: CTAN
     needs:
       - l3build
     steps:
@@ -51,10 +58,10 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: Package
-      - name: Validate CTAN package
+      - name: Upload CTAN package
         uses: ./.github/actions/ctan-upload
         with:
-          uploader: Dummy Name
-          email: dryrun@example.com
+          uploader: ${{ secrets.CTAN_NAME }}
+          email: ${{ secrets.CTAN_EMAIL }}
           filename: lua-ul-ctan.zip
-          dry-run: true
+          dry-run: false
