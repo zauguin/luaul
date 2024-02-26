@@ -1,6 +1,6 @@
 % \iffalse meta-comment
 %
-%% Copyright (C) 2020-2022 by Marcel Krueger
+%% Copyright (C) 2020-2024 by Marcel Krueger
 %%
 %% This file may be distributed and/or modified under the
 %% conditions of the LaTeX Project Public License, either
@@ -244,6 +244,7 @@ local callback_define
 %    \end{macrocode}
 % HACK: Do not do this at home! We need to define the engine callback directly,
 % so we use the debug library to get the ``real'' \verb+callback.define+:
+% \changes{0.2.1}{2024-02-26}{Reimplement callback patching to be TL 2024 compatible}
 %    \begin{macrocode}
 do
   local saved_luatexbase, saved_callback_register = luatexbase, callback.register
@@ -937,7 +938,7 @@ require'lua-ul-patches-preserve-attr'
 \NeedsTeXFormat{LaTeX2e}
 \ProvidesExplPackage
   {lua-ul}
-  {2022-05-31}{0.2.0}{Underlining and related functionality for LuaTeX}
+  {2024-02-26}{0.2.1}{Underlining and related functionality for LuaTeX}
 % \fi
 % First define some messages.
 %    \begin{macrocode}
