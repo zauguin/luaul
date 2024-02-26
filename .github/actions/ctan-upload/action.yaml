@@ -1,0 +1,37 @@
+name: CTAN upload
+
+inputs:
+  filename:
+    required: true
+  dry-run:
+    required: true
+  uploader:
+    required: true
+  email:
+    required: true
+  version:
+    required: false
+    default: ${{ github.ref_name }}
+
+runs:
+  using: composite
+  steps:
+    - name: Send to CTAN
+      uses: zauguin/ctan-upload@v0.1
+      with:
+        package-name: lua-ul
+        version: ${{ inputs.version }}
+        author: Marcel Krüger
+        uploader: Dummy Name
+        email: dryrun@example.com
+        license: lppl1.3c
+        summary: Underlining for LuaLaTeX
+        ctan-path: /macros/luatex/latex/lua-ul
+        update: true
+        topic: underline,luatex
+        description: |
+           This package provides underlining, strikethough, and highlighting using features in LuaLaTeX which avoid the restrictions imposed by other methods. In particular, kerning is not affected, the underlined text can use arbitrary commands, hyphenation works etc.
+
+           The package requires LuaTeX version ≥ 1.12.0. 
+        filename: ${{ inputs.filename }}
+        dry-run: ${{ inputs.dry-run }}

@@ -36,33 +36,25 @@ jobs:
         with:
           artifacts: "*.zip"
           token: ${{ secrets.GITHUB_TOKEN }}
+          draft: true
 
   ctan-validate:
     runs-on: ubuntu-22.04
     needs:
       - l3build
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github
       - name: Download package artifact
         uses: actions/download-artifact@v4
         with:
           name: Package
-      - name: Upload CTAN package
-        uses: zauguin/ctan-upload@v0.1
+      - name: Validate CTAN package
+        uses: ./.github/actions/ctan-upload
         with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          package-name: lua-ul
-          version: ${{ github.ref_name }}
-          author: Marcel Krüger
           uploader: Dummy Name
           email: dryrun@example.com
-          license: lppl1.3c
-          summary: Underlining for LuaLaTeX
-          ctan-path: /macros/luatex/latex/lua-ul
-          update: true
-          topic: underline,luatex
-          description: |
-             This package provides underlining, strikethough, and highlighting using features in LuaLaTeX which avoid the restrictions imposed by other methods. In particular, kerning is not affected, the underlined text can use arbitrary commands, hyphenation works etc.
-
-             The package requires LuaTeX version ≥ 1.12.0. 
           filename: lua-ul-ctan.zip
           dry-run: true
