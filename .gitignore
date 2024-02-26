@@ -4,3 +4,6 @@
 *.glo
 *.gls
 *.ilg
+*.zip
+*.pdf
+/build
