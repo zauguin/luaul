@@ -1,0 +1,6 @@
+l3build latex latex-bin luatex
+cm etex knuth-lib tex tex-ini-files unicode-data
+graphics xcolor luacolor
+makeindex
+tools iftex infwarerr kvoptions epstopdf-pkg amsfonts
+csquotes hypdoc framed metalogo tikzducks pict2e hyperref pgf
