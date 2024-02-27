@@ -22,8 +22,8 @@ runs:
         package-name: lua-ul
         version: ${{ inputs.version }}
         author: Marcel Krüger
-        uploader: Dummy Name
-        email: dryrun@example.com
+        uploader: ${{ inputs.uploader }}
+        email: ${{ inputs.email }}
         license: lppl1.3c
         summary: Underlining for LuaLaTeX
         ctan-path: /macros/luatex/latex/lua-ul
