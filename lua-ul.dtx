@@ -942,10 +942,6 @@ require'lua-ul-patches-preserve-attr'
 % \fi
 % First define some messages.
 %    \begin{macrocode}
-\msg_new:nnnn {lua-ul} {luatex-required} {LuaLaTeX~required} {
-  Lua-UL~requires~LuaLaTeX.~
-  Maybe~you~forgot~to~switch~the~engine~in~your~editor?
-}
 \msg_new:nnnn {lua-ul} {luacolor-required} {
   Color~support~in~lua-ul~requires~luacolor.
 }{
@@ -956,9 +952,9 @@ require'lua-ul-patches-preserve-attr'
 % Only \LuaLaTeX{} is supported.
 % For other engines we show an error.
 %    \begin{macrocode}
-\sys_if_engine_luatex:F {
-  \msg_error:nn {lua-ul} {luatex-required}
-}
+\RequirePackage{iftex}
+\RequireLuaTeX
+%
 \lua_load_module:n {lua-ul}
 %
 %    \end{macrocode}
